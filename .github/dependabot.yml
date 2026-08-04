@@ -44,3 +44,24 @@ updates:
       - "automated"
     assignees:
       - "dyoshikawa"
+
+  # Automatic updates for the devcontainer base image
+  - package-ecosystem: "docker"
+    directory: "/.devcontainer"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 1
+    open-pull-requests-limit: 1
+    groups:
+      all-docker:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    assignees:
+      - "dyoshikawa"

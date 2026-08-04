@@ -41,7 +41,7 @@
     "cicheck": "pnpm run cicheck:code && pnpm run cicheck:content",
     "cicheck:code": "pnpm run check && pnpm run test",
     "cicheck:content": "pnpm run cspell && pnpm run secretlint",
-    "cspell": "cspell --no-progress --gitignore .",
+    "cspell": "cspell --no-progress --gitignore --dot .",
     "fix": "pnpm run fmt && pnpm run oxlint:fix",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
