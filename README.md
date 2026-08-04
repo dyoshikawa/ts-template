@@ -5,24 +5,26 @@ Opinionated TypeScript repository template, modeled on the toolchain used by
 
 ## What's included
 
-| Area              | Tool                                                                              | Config                                         |
-| ----------------- | --------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Runtime / tooling | [mise](https://mise.jdx.dev/)                                                     | `mise.toml`                                    |
-| Package manager   | [pnpm](https://pnpm.io/)                                                          | `pnpm-workspace.yaml`, `.npmrc`                |
-| Language          | [TypeScript](https://www.typescriptlang.org/)                                     | `tsconfig.json`                                |
-| Build             | [tsdown](https://tsdown.dev/)                                                     | `tsdown.config.ts`                             |
-| Test              | [Vitest](https://vitest.dev/)                                                     | `vitest.config.ts`                             |
-| Format            | [oxfmt](https://oxc.rs/)                                                          | `.oxfmtrc.json`                                |
-| Lint              | [oxlint](https://oxc.rs/)                                                         | `.oxlintrc.json`                               |
-| Unused code       | [knip](https://knip.dev/)                                                         | `knip.ts`                                      |
-| Spelling          | [cspell](https://cspell.org/)                                                     | `cspell.json`                                  |
-| Secret scanning   | [secretlint](https://github.com/secretlint/secretlint)                            | `.secretlintrc.json`                           |
-| Git hooks         | [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) + lint-staged | `package.json`, `.lintstagedrc.js`             |
-| AI rules          | [rulesync](https://github.com/dyoshikawa/rulesync)                                | `rulesync.jsonc`, `.rulesync/`                 |
-| Workflow lint     | [actionlint](https://github.com/rhysd/actionlint)                                 | `.github/workflows/actionlint.yml`             |
-| Action pinning    | [pinact](https://github.com/suzuki-shunsuke/pinact)                               | `.pinact.yaml`, `.github/workflows/pinact.yml` |
-| Dependency bumps  | Dependabot                                                                        | `.github/dependabot.yml`                       |
-| CI / Release      | GitHub Actions                                                                    | `.github/workflows/ci.yml`, `publish.yml`      |
+| Area              | Tool                                                                              | Config                                                      |
+| ----------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Runtime / tooling | [mise](https://mise.jdx.dev/)                                                     | `mise.toml`                                                 |
+| Package manager   | [pnpm](https://pnpm.io/)                                                          | `pnpm-workspace.yaml`, `.npmrc`                             |
+| Language          | [TypeScript](https://www.typescriptlang.org/)                                     | `tsconfig.json`                                             |
+| Build             | [tsdown](https://tsdown.dev/)                                                     | `tsdown.config.ts`                                          |
+| Test              | [Vitest](https://vitest.dev/)                                                     | `vitest.config.ts`                                          |
+| Format            | [oxfmt](https://oxc.rs/)                                                          | `.oxfmtrc.json`                                             |
+| Lint              | [oxlint](https://oxc.rs/)                                                         | `.oxlintrc.json`                                            |
+| Unused code       | [knip](https://knip.dev/)                                                         | `knip.ts`                                                   |
+| Spelling          | [cspell](https://cspell.org/)                                                     | `cspell.json`                                               |
+| Secret scanning   | [secretlint](https://github.com/secretlint/secretlint)                            | `.secretlintrc.json`                                        |
+| Git hooks         | [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) + lint-staged | `package.json`, `.lintstagedrc.js`                          |
+| AI rules          | [rulesync](https://github.com/dyoshikawa/rulesync)                                | `rulesync.jsonc`, `.rulesync/`                              |
+| Workflow lint     | [actionlint](https://github.com/rhysd/actionlint)                                 | `.github/workflows/actionlint.yml`                          |
+| Action pinning    | [pinact](https://github.com/suzuki-shunsuke/pinact)                               | `.pinact.yaml`, `.github/workflows/pinact.yml`              |
+| Image scan        | [Trivy](https://trivy.dev/)                                                       | `.trivyignore`, `.github/workflows/trivy-security-scan.yml` |
+| Dev environment   | Dev Container                                                                     | `.devcontainer/`                                            |
+| Dependency bumps  | Dependabot                                                                        | `.github/dependabot.yml`                                    |
+| CI / Release      | GitHub Actions                                                                    | `.github/workflows/ci.yml`, `publish.yml`                   |
 
 ## Getting started
 
@@ -75,6 +77,26 @@ Then rename the project:
 - Every third-party GitHub Action is pinned to a full-length commit SHA, enforced by `pinact` in CI.
 - Workflows declare the narrowest `permissions:` block they need.
 - `secretlint` runs over every staged file through lint-staged, and over the whole tree in CI.
+- Trivy scans the devcontainer Dockerfile for misconfigurations on every change, failing on
+  `CRITICAL`/`HIGH`. Findings that are intentional go in `.trivyignore` with a reason.
+- The devcontainer installs [Safe Chain](https://github.com/AikidoSec/safe-chain) so npm/pnpm
+  installs inside it are screened for known-malicious packages.
+
+## Dev Container
+
+`.devcontainer/` builds a sandbox image (`node:26` + zsh/oh-my-zsh, mise, gh, ripgrep, delta) where
+the AI coding agents can run with relaxed permissions without touching the host:
+
+- `mise install` runs at build time from the repo's `mise.toml`, so node, pnpm, actionlint and pinact
+  are present in the image. **Changing `mise.toml` requires rebuilding the container.**
+- Claude Code, Codex CLI (version-pinned with a SHA256-checked installer) and OpenCode are installed.
+- `node_modules`, the pnpm store, the bash history and `~/.claude` live in named volumes, so they
+  survive rebuilds and don't collide with the host.
+- API keys are passed in from the host through `TS_TEMPLATE_DEVCONTAINER_*` environment variables —
+  rename that prefix per project, and export only the keys you actually use.
+- `postCreateCommand` runs `.devcontainer/init.sh`: it fixes volume ownership, configures the git
+  credential helper when GitHub credentials exist, points pnpm at the store volume, and installs
+  dependencies.
 
 ## AI coding agent rules
 
