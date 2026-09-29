@@ -1,8 +1,13 @@
 {
   "name": "ts-template",
   "version": "0.0.0",
-  "description": "Opinionated TypeScript repository template",
+  "private": true,
+  "description": "Opinionated TypeScript web app template: TanStack Start on Cloudflare Workers with email sign-in, PWA install and push notifications",
   "keywords": [
+    "cloudflare-workers",
+    "pwa",
+    "react",
+    "tanstack-start",
     "template",
     "typescript"
   ],
@@ -17,56 +22,70 @@
   "license": "MIT",
   "author": "dyoshikawa",
   "type": "module",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    }
-  },
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsdown",
+    "build": "vite build",
+    "cf-typegen": "wrangler types --strict-vars=false",
     "check": "pnpm run fmt:check && pnpm run oxlint && pnpm run typecheck",
     "cicheck": "pnpm run cicheck:code && pnpm run cicheck:content",
     "cicheck:code": "pnpm run check && pnpm run test",
     "cicheck:content": "pnpm run cspell && pnpm run secretlint",
     "cspell": "cspell --no-progress --gitignore --dot .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:reset:local": "node scripts/reset-local-db.mjs",
+    "deploy": "pnpm run build && wrangler deploy",
+    "dev": "vite dev",
+    "dev:cf": "node scripts/cf-dev.mjs",
+    "dev:cf:fresh": "node scripts/cf-dev.mjs --fresh",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
     "fix": "pnpm run fmt && pnpm run oxlint:fix",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
     "generate": "rulesync generate",
+    "icons": "node scripts/generate-icons.mjs",
     "knip": "knip",
     "oxlint": "oxlint . --max-warnings 0",
     "oxlint:fix": "oxlint . --fix --max-warnings 0",
     "prepare": "simple-git-hooks && pnpm generate",
-    "prepublishOnly": "pnpm build",
+    "preview": "vite preview",
     "secretlint": "secretlint --secretlintignore .gitignore \"**/*\"",
     "sort": "sort-package-json",
     "test": "vitest run --silent=true",
     "test:coverage": "vitest run --coverage --silent=true",
     "test:watch": "vitest --silent=true",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "vapid": "node scripts/generate-vapid-keys.mjs"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm exec lint-staged"
   },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.4",
+    "@tanstack/react-router": "1.170.35",
+    "@tanstack/react-start": "1.168.52",
+    "better-auth": "1.7.4",
+    "drizzle-orm": "0.45.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.2"
+  },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "1.54.8",
+    "@playwright/test": "1.63.0",
     "@secretlint/secretlint-rule-preset-recommend": "13.0.5",
-    "@tsconfig/node22": "22.0.6",
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.3",
     "@types/node": "26.6.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
     "@vitest/coverage-v8": "5.0.1",
     "cspell": "10.3.3",
+    "drizzle-kit": "0.31.10",
+    "jsdom": "30.0.1",
     "knip": "6.37.0",
     "lint-staged": "17.5.1",
     "oxfmt": "0.68.0",
@@ -75,16 +94,14 @@
     "secretlint": "13.0.5",
     "simple-git-hooks": "2.14.0",
     "sort-package-json": "4.0.0",
-    "tsdown": "0.23.0",
-    "tsx": "4.23.15",
+    "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
-    "vitest": "5.0.1"
+    "vite": "8.3.0",
+    "vitest": "5.0.1",
+    "wrangler": "4.131.1"
   },
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=10"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

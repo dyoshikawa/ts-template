@@ -10,6 +10,9 @@
   "experimentalSortImports": {},
   "ignorePatterns": [
     "package.json",
+    "src/routeTree.gen.ts",
+    "drizzle/**",
+    "worker-configuration.d.ts",
     "node_modules/**",
     "dist/**",
     ".vscode/settings.json",

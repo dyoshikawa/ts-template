@@ -6,7 +6,9 @@ on:
     paths-ignore: &paths-ignore
       - "docs/**"
       - "LICENSE"
-      - "README.md"
+      - "**/*.md"
+      - ".rulesync/**"
+      - ".claude/**"
   pull_request:
     branches: [main]
     paths-ignore: *paths-ignore
@@ -14,11 +16,16 @@ on:
 permissions:
   contents: read # Required for checking out code
 
+# A newer push to the same branch or pull request makes the older run moot.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     name: Code Quality & Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -56,8 +63,62 @@ jobs:
           fi
 
       - name: Check build artifacts
-        run: |
-          test -f dist/index.js
-          test -f dist/index.cjs
-          test -f dist/index.d.ts
-          test -f dist/index.d.cts
+        run: test -d dist/client && test -f dist/server/index.js
+
+  e2e:
+    name: Browser Tests
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup mise
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          experimental: true
+
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts
+
+      # The browser itself is cached per Playwright version (restoring it took
+      # 13 s against 51-59 s for download and apt); the system libraries it
+      # needs are installed with apt either way. The pnpm store is not cached:
+      # restoring it took longer than `pnpm install` downloading afresh.
+      - name: Resolve the Playwright version
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Chromium
+        id: chromium-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.chromium-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install Chromium's system libraries
+        if: steps.chromium-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+
+      # The production bundle in the Cloudflare emulator, Turnstile off and a
+      # fixed sign-in code (.dev.vars.e2e), on a fresh local database.
+      - name: Run browser tests
+        run: pnpm e2e
+
+      # Also after a cancelled step: the emulator's own log says why workerd
+      # went away when a test hangs.
+      - name: Upload traces of failed tests
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-test-results
+          path: |
+            test-results/
+            ~/.config/.wrangler/logs/
+          retention-days: 7

@@ -9,7 +9,8 @@
       "mcp": true,
       "subagents": true,
       "skills": true,
-      "hooks": true
+      "hooks": true,
+      "permissions": true
     },
     "codexcli": {
       "rules": true,

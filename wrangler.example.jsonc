@@ -1,0 +1,60 @@
+// An example of `wrangler.jsonc` filled in for a production deployment: a
+// custom domain, real Email Service sender, Turnstile widget and push
+// notifications. wrangler never reads this file; copy the parts you need into
+// `wrangler.jsonc` and replace every `<...>` value. See README → "Deploy to
+// Cloudflare" for where each value comes from.
+//
+// Secrets never go in this file. Set them with `wrangler secret put <NAME>`:
+//   BETTER_AUTH_SECRET    required — `openssl rand -base64 48`
+//   TURNSTILE_SECRET_KEY  the secret of the widget below
+//   VAPID_PRIVATE_KEY     the private half of `pnpm vapid`
+//   ALLOWED_EMAILS        optional — comma-separated addresses allowed to sign in
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "<your-app>",
+  "compatibility_date": "2026-09-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "src/server.ts",
+  // A Custom Domain: `wrangler deploy` creates the DNS record and certificate.
+  // The zone must be on the same Cloudflare account.
+  "routes": [{ "pattern": "<app.example.com>", "custom_domain": true }],
+  // Keep the workers.dev address on as well (wrangler turns it off once
+  // routes exist). Set false to serve the app from the custom domain only.
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // An address on a domain onboarded to Cloudflare Email Service.
+    "EMAIL_FROM": "no-reply@<example.com>",
+    // Dashboard → Turnstile → the widget's site key. Add the custom domain,
+    // the workers.dev hostname and `localhost` to the widget's hostnames.
+    "TURNSTILE_SITE_KEY": "<your-turnstile-site-key>",
+    // `VAPID_PUBLIC_KEY` printed by `pnpm vapid`. Changing it later makes
+    // every device subscribe again.
+    "VAPID_PUBLIC_KEY": "<your-vapid-public-key>",
+    "VAPID_SUBJECT": "mailto:<admin@example.com>"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "<your-app>",
+      // Printed by `pnpm exec wrangler d1 create <your-app>`.
+      "database_id": "<your-d1-database-id>",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "PUSH_TEST_LIMITER",
+      // Any number unique among the account's rate limit namespaces.
+      "namespace_id": "1001",
+      "simple": { "limit": 3, "period": 60 }
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ]
+}

@@ -2,8 +2,14 @@
 # Postinstall scripts stay blocked by default; add packages here only when a
 # build step is genuinely required.
 allowBuilds:
+  "@ast-grep/lang-go": false
+  "@ast-grep/lang-rust": false
+  "@prisma/client": false
+  better-sqlite3: false
   esbuild: false
   simple-git-hooks: false
+  tldjs: false
+  workerd: false
 ignoreScripts: false
 # Refuse dependency versions published less than a day ago, so a compromised
 # release has time to be pulled before it lands in a lockfile.

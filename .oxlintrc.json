@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
 
-  "plugins": ["typescript", "import", "unicorn"],
+  "plugins": ["typescript", "import", "unicorn", "react", "jsx-a11y"],
 
   "categories": {
     "correctness": "error",
@@ -17,22 +17,24 @@
     "no-console": "error",
     "no-new": "off",
     "no-underscore-dangle": "off",
+    // The automatic JSX runtime makes importing React unnecessary.
+    "react/react-in-jsx-scope": "off",
     "typescript/no-explicit-any": "warn",
     "unicorn/prefer-node-protocol": "error",
     "unicorn/no-array-reduce": "off"
   },
 
   "env": {
-    "browser": false,
+    "browser": true,
     "node": true,
     "es2024": true
   },
 
-  "ignorePatterns": ["dist/**", "coverage/**", "*.d.ts", "node_modules/**"],
+  "ignorePatterns": ["dist/**", "coverage/**", "*.d.ts", "node_modules/**", "src/routeTree.gen.ts"],
 
   "overrides": [
     {
-      "files": ["**/*.test.ts"],
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": {
         "typescript/no-explicit-any": "off"
       }
