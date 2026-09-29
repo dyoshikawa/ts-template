@@ -12,11 +12,5 @@
       }
     ]
   },
-  "permissions": {
-    "allow": [
-      "Bash(pnpm run db:migrate:remote)",
-      "Bash(pnpm run deploy *)",
-      "Bash(pnpm run deploy)"
-    ]
-  }
+  "permissions": {}
 }

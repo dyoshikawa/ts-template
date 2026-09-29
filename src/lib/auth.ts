@@ -14,6 +14,10 @@ import { turnstileDisabled, turnstileSecretKey } from "./turnstile";
 
 const OTP_LENGTH = 6;
 const OTP_EXPIRES_IN_SECONDS = 10 * 60;
+// Signing in means fetching a code from the mailbox, so a session is kept
+// for a long time and slid forward once a day while the user keeps coming back.
+const SESSION_EXPIRES_IN_SECONDS = 90 * 24 * 60 * 60;
+const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
 const SIGN_IN_PATHS = new Set(["/email-otp/send-verification-otp", "/sign-in/email-otp"]);
 
 // Only ever used by `vite dev`, where there is no `wrangler secret`.
@@ -34,9 +38,26 @@ export function createAuth({ request }: { request: Request }) {
     secret: env.BETTER_AUTH_SECRET ?? (import.meta.env.DEV ? DEV_SECRET : undefined),
     database: drizzleAdapter(createDb({ d1: env.DB }), { provider: "sqlite" }),
     session: {
+      expiresIn: SESSION_EXPIRES_IN_SECONDS,
+      updateAge: SESSION_UPDATE_AGE_SECONDS,
       // Avoid a D1 round trip on every request; the cookie is re-validated
       // against the database once it is older than `maxAge`.
       cookieCache: { enabled: true, maxAge: 5 * 60 },
+    },
+    telemetry: { enabled: false },
+    rateLimit: {
+      // The library's default (`NODE_ENV === "production"`) is never true in
+      // a Worker, so it is switched on here. The mailer is the endpoint worth
+      // protecting (the email OTP plugin allows three sends a minute per
+      // address). Counted in D1 (the `rateLimit` table) so every isolate sees
+      // the same tally; off for local runs so browser tests can sign in freely.
+      enabled: !isLocalRequest(request),
+      storage: "database",
+    },
+    advanced: {
+      // The client address Cloudflare stamps on every request; `x-forwarded-for`
+      // can be supplied by the client and is not trusted.
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     },
     hooks: {
       // Addresses outside `ALLOWED_EMAILS` get neither a code nor a session.
