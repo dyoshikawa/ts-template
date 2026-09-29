@@ -3,6 +3,23 @@
 /* Follow the device setting; every component carries its own dark: variants. */
 html {
   color-scheme: light dark;
+  /* iOS enlarges text on rotation otherwise. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/*
+ * iOS Safari zooms the page into any text field whose font is smaller than
+ * 16 px when it is tapped. Form controls start at 16 px here (the base layer,
+ * so a larger utility such as text-2xl still wins); never give one a smaller
+ * text utility — e2e/input-zoom.spec.ts checks every screen.
+ */
+@layer base {
+  input,
+  select,
+  textarea {
+    font-size: 1rem;
+  }
 }
 
 body {

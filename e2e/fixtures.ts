@@ -14,12 +14,30 @@ export async function signIn({ page, email }: { page: Page; email: string }): Pr
   await expect(page.getByRole("link", { name: email })).toBeVisible();
 }
 
-/** A fresh address per test, so tests never see each other's data. */
-export const test = base.extend<{ email: string }>({
+export const test = base.extend<{ email: string; cspGuard: void }>({
+  /** A fresh address per test, so tests never see each other's data. */
   // oxlint-disable-next-line no-empty-pattern -- Playwright's fixture signature
   email: async ({}, use, testInfo) => {
     await use(`e2e-${testInfo.testId}-${Date.now()}@example.com`);
   },
+  /**
+   * Fails any test during which the browser blocked something under the
+   * Content-Security-Policy, so a script, style or frame the policy forgot
+   * shows up here rather than as a broken page in production.
+   */
+  cspGuard: [
+    async ({ page }, use) => {
+      const violations: string[] = [];
+      page.on("console", (message) => {
+        if (message.type() === "error" && /Content Security Policy/iu.test(message.text())) {
+          violations.push(message.text());
+        }
+      });
+      await use();
+      expect(violations).toEqual([]);
+    },
+    { auto: true },
+  ],
 });
 
 export { expect };

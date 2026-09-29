@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/** Where the emulator serves the built Worker for the tests. */
-const PORT = 4173;
+/** Where the emulator serves the built Worker for the tests; `E2E_PORT` moves it off a busy port. */
+const PORT = Number(process.env.E2E_PORT ?? 4173);
 const BASE_URL = `http://localhost:${PORT}`;
 
 /**

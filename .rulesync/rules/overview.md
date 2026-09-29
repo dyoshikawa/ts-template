@@ -19,6 +19,10 @@ notifications. The UI is written in English.
 
 - Every screen must work on a phone first: 44 px tap targets, 16 px inputs (`src/components/ui.ts`),
   and dark mode through `dark:` variants on every component.
+  Never give a form control a text size under 16 px: iOS zooms into it on tap.
+- The Content-Security-Policy (`contentSecurityPolicy` in `src/lib/security-headers.ts`) allows
+  scripts only with the per-response nonce. Never add `'unsafe-inline'` or `'unsafe-eval'` to
+  `script-src`; a new third-party origin (images, frames, fetches) is added to its directive there.
 - Server functions must validate input with `zod/mini` and scope every read and write to the
   signed-in user, whose session comes from Better Auth on the server, never from the client
   (`requireUserId` in `src/lib/auth-server.ts`).

@@ -25,7 +25,13 @@ an installable PWA and Web Push notifications — on the toolchain used by
   and drops subscriptions the push service reports gone. On iOS/iPadOS 16.4+ pushes reach apps added
   to the Home Screen only.
 - **Phone first, dark mode** — 44 px tap targets, 16 px inputs, `dark:` variants throughout.
-- **Security headers** on every page and API response (`src/lib/security-headers.ts`).
+- **Security headers** on every page and API response (`src/lib/security-headers.ts`), including a
+  nonce-based Content-Security-Policy: each response gets a fresh nonce that TanStack Start puts on
+  every script it renders, and `'strict-dynamic'` lets those load the rest. Loading anything from
+  another origin (an image CDN, an analytics script) means adding it to `contentSecurityPolicy`;
+  the browser tests fail on any CSP violation. `vite dev` runs without the policy.
+- **No zoom on iOS** — form controls are at least 16 px, which keeps iOS Safari from zooming in when
+  one is tapped; `e2e/input-zoom.spec.ts` checks every screen.
 
 ## What's included
 
