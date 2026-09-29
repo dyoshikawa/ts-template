@@ -1,12 +1,9 @@
 {
   "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/permissions-schema.json",
-  "permission": {
-    "bash": {
-      "pnpm run deploy": "allow",
-      "pnpm run deploy *": "allow",
-      "pnpm run db:migrate:remote": "allow"
-    }
-  },
+  // Nothing that reaches production (`pnpm run deploy`, `pnpm run
+  // db:migrate:remote`) is pre-approved: an agent asks first. Add allow rules
+  // here per project once that is what you want.
+  "permission": {},
   "codexcli": {
     "base_permission_profile": ":danger-full-access",
     "approvals_reviewer": "auto_review",

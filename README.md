@@ -11,7 +11,9 @@ an installable PWA and Web Push notifications — on the toolchain used by
   address, receive a 6-digit code (sent through Cloudflare Email Service), enter it. First-time
   addresses are registered on the spot; `ALLOWED_EMAILS` can restrict who may sign in.
   [Turnstile](https://developers.cloudflare.com/turnstile/) guards the mailer and account deletion.
-  Accounts can be closed from the account page, deleting every row of the user.
+  Accounts can be closed from the account page, deleting every row of the user. Sessions last 90
+  days and slide forward while the user keeps coming back; sign-in requests are rate-limited in D1
+  (off for local runs), keyed by the client address Cloudflare reports (`CF-Connecting-IP`).
 - **PWA** — web app manifest, icons (drawn by `scripts/generate-icons.mjs`), and a service worker
   (`public/sw.js`) that caches the hashed assets and serves an offline page.
 - **Install button** — fires the browser's own install dialog where one is offered (Chrome, Edge,
@@ -126,7 +128,8 @@ await notifyUser({
 The service worker shows the notification and opens `url` (a path on this app) when it is tapped.
 Subscription endpoints are accepted only from the known push services (`src/lib/push.ts`), so a
 client cannot make the Worker POST to an arbitrary address. The test button on the account page is
-capped by the `PUSH_TEST_LIMITER` rate limit binding.
+capped by the `PUSH_TEST_LIMITER` rate limit binding. When the browser renews a subscription on its own, the service worker
+sends the new one to `/api/push/subscription`.
 
 ## Scripts
 

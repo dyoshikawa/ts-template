@@ -11,7 +11,7 @@
 //
 // Bump VERSION after changing the caching rules, or installed apps keep the old ones.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const ASSET_CACHE = `ts-template-assets-${VERSION}`;
 const SHELL_CACHE = `ts-template-shell-${VERSION}`;
 // Static Assets serve public/offline.html at the extension-less URL and redirect
@@ -119,13 +119,57 @@ self.addEventListener("notificationclick", (event) => {
   // Only a path on this origin is followed; anything else opens the top page.
   const target = new URL(event.notification.data?.url ?? "/", self.location.origin);
   const url = target.origin === self.location.origin ? target.href : self.location.origin;
-  event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
-      const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
-      if (open) {
-        return open.focus().then((client) => client.navigate(url));
-      }
-      return self.clients.openWindow(url);
-    }),
-  );
+  event.waitUntil(openApp(url));
 });
+
+/**
+ * Focuses a window of the app on `url`, or opens one. Only a window this
+ * worker controls can be navigated (`navigate` rejects for any other), so an
+ * uncontrolled one — or a failed navigation — falls back to a new window.
+ */
+async function openApp(url) {
+  const windows = await self.clients.matchAll({ type: "window" });
+  const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+  if (open) {
+    try {
+      const focused = await open.focus();
+      await focused.navigate(url);
+      return;
+    } catch {
+      // Fall through to a new window.
+    }
+  }
+  await self.clients.openWindow(url);
+}
+
+/**
+ * The browser renewed (or dropped) the subscription on its own, e.g. after
+ * the push service expired it. The new one is sent to the server with the
+ * page's session cookie; the stale endpoint is dropped by the server the
+ * first time the push service reports it gone.
+ */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(resubscribe(event));
+});
+
+async function resubscribe(event) {
+  const old = event.oldSubscription;
+  const subscription =
+    event.newSubscription ??
+    (old
+      ? await self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: old.options.applicationServerKey,
+        })
+      : null);
+  if (!subscription) {
+    return;
+  }
+  const { endpoint, keys } = subscription.toJSON();
+  await fetch("/api/push/subscription", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ endpoint, p256dh: keys?.p256dh, auth: keys?.auth }),
+  });
+}
