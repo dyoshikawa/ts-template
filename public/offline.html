@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#2563eb" />
+    <title>ts-template — Offline</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: system-ui, sans-serif;
+        background: #eff6ff;
+        color: #262626;
+        text-align: center;
+        padding: 24px;
+      }
+      main {
+        max-width: 24rem;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      button {
+        min-height: 44px;
+        padding: 8px 20px;
+        font-size: 1rem;
+        border-radius: 8px;
+        border: 0;
+        background: #171717;
+        color: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #0a0a0a;
+          color: #f5f5f5;
+        }
+        button {
+          background: #f5f5f5;
+          color: #171717;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" width="96" height="96" alt="" />
+      <h1>You are offline</h1>
+      <p>ts-template needs an internet connection. Check your connection and try again.</p>
+      <button type="button" onclick="location.reload()">Reload</button>
+    </main>
+  </body>
+</html>

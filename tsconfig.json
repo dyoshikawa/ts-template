@@ -1,14 +1,28 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": ".",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "strict": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": false
+    "exactOptionalPropertyTypes": false,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true
   },
-  "include": ["src/**/*.ts", "*.config.ts", "knip.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "e2e/**/*.ts",
+    "*.config.ts",
+    "knip.ts",
+    "worker-configuration.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".wrangler"]
 }

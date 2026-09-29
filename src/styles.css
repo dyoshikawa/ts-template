@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Follow the device setting; every component carries its own dark: variants. */
+html {
+  color-scheme: light dark;
+}
+
+body {
+  @apply bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
+}
+
+/*
+ * iOS Safari gives date inputs and selects their own height and centres the
+ * date text; force the same 44 px box as every other control.
+ */
+input[type="date"],
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2.75rem;
+  line-height: 1.25rem;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.25rem;
+}
+
+/* The native chevron disappears with appearance: none; draw our own. */
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23737373' stroke-width='1.5'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 1.1rem;
+  padding-right: 2.25rem;
+}

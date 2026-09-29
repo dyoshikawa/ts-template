@@ -1,13 +1,16 @@
 import { type KnipConfig } from "knip";
 
 const config: KnipConfig = {
-  // `src/index.ts` is auto-detected from package.json `exports`/`main`/`module`.
-  // Test files are listed explicitly because no enabled plugin covers them.
-  entry: ["src/**/*.test.ts"],
-  project: ["src/**/*.ts"],
+  // Routes are reached through TanStack Router's generated route tree, test
+  // files are not covered by any enabled plugin, and the Workers stand-in is
+  // reached through a Vitest alias.
+  entry: ["src/routes/**/*.tsx", "src/**/*.test.{ts,tsx}", "src/test/cloudflare-workers.ts"],
+  project: ["src/**/*.{ts,tsx,css}"],
   ignoreDependencies: [
     // Referenced from .secretlintrc.json rather than imported from source.
     "@secretlint/secretlint-rule-preset-recommend",
+    // `cloudflare:workers` is a Workers runtime module, not an npm package.
+    "cloudflare",
   ],
 };
 

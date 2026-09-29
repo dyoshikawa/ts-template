@@ -239,3 +239,14 @@ rulesync.local.jsonc
 **/.opencode/plugins/rulesync-hooks.js
 !.rulesync/.aiignore
 # End of Rulesync
+
+# TanStack Start / Vite / Cloudflare Workers
+.output/
+.tanstack/
+.wrangler/
+.dev.vars
+
+# Playwright
+/test-results/
+/playwright-report/
+

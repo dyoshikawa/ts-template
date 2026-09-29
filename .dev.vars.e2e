@@ -1,0 +1,10 @@
+# Variables for the browser tests (`pnpm e2e`) and for a local run without
+# Turnstile. Loaded with `wrangler dev --env-file`; never set these on the
+# deployed Worker.
+BETTER_AUTH_SECRET=insecure-e2e-only-secret-do-not-use-in-production
+TURNSTILE_DISABLED=1
+E2E_SIGN_IN_CODE=123456
+# A throwaway VAPID pair for the notification tests (no push ever leaves the
+# emulator with it). Generate your own with `pnpm vapid` for real use.
+VAPID_PUBLIC_KEY=BB4t0EP9ulF65qICyG78IxjWvNrAhgOX_aSJm0hY3T3DQze82BNAoEutpXTJkB1JXVDU5NeG0zhj1JC-FERAOeY
+VAPID_PRIVATE_KEY=SN83g1AdG4w7eiD5EQ293hUryuu60CInsDKIDpgiftQ

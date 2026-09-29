@@ -1,63 +1,154 @@
 # ts-template
 
-Opinionated TypeScript repository template, modeled on the toolchain used by
+Opinionated TypeScript web app template: [TanStack Start](https://tanstack.com/start) (React) on
+[Cloudflare Workers](https://developers.cloudflare.com/workers/), with passwordless email sign-in,
+an installable PWA and Web Push notifications — on the toolchain used by
 [dyoshikawa/rulesync](https://github.com/dyoshikawa/rulesync).
+
+## Features
+
+- **Email sign-in** — [Better Auth](https://www.better-auth.com/) with the email OTP plugin: enter an
+  address, receive a 6-digit code (sent through Cloudflare Email Service), enter it. First-time
+  addresses are registered on the spot; `ALLOWED_EMAILS` can restrict who may sign in.
+  [Turnstile](https://developers.cloudflare.com/turnstile/) guards the mailer and account deletion.
+  Accounts can be closed from the account page, deleting every row of the user.
+- **PWA** — web app manifest, icons (drawn by `scripts/generate-icons.mjs`), and a service worker
+  (`public/sw.js`) that caches the hashed assets and serves an offline page.
+- **Install button** — fires the browser's own install dialog where one is offered (Chrome, Edge,
+  Samsung Internet), and shows the "Add to Home Screen" steps on iOS and on phones whose browser
+  offers none. Hidden once the app runs installed.
+- **Push notifications** — Web Push implemented on WebCrypto alone (`src/lib/web-push.ts`: RFC 8291
+  payload encryption and RFC 8292 VAPID), so it runs in a Worker without Node's `crypto`. Devices
+  subscribe from the account page; `notifyUser` (`src/lib/push.ts`) sends to all of a user's devices
+  and drops subscriptions the push service reports gone. On iOS/iPadOS 16.4+ pushes reach apps added
+  to the Home Screen only.
+- **Phone first, dark mode** — 44 px tap targets, 16 px inputs, `dark:` variants throughout.
+- **Security headers** on every page and API response (`src/lib/security-headers.ts`).
 
 ## What's included
 
-| Area              | Tool                                                                              | Config                                                      |
-| ----------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Runtime / tooling | [mise](https://mise.jdx.dev/)                                                     | `mise.toml`                                                 |
-| Package manager   | [pnpm](https://pnpm.io/)                                                          | `pnpm-workspace.yaml`, `.npmrc`                             |
-| Language          | [TypeScript](https://www.typescriptlang.org/)                                     | `tsconfig.json`                                             |
-| Build             | [tsdown](https://tsdown.dev/)                                                     | `tsdown.config.ts`                                          |
-| Test              | [Vitest](https://vitest.dev/)                                                     | `vitest.config.ts`                                          |
-| Format            | [oxfmt](https://oxc.rs/)                                                          | `.oxfmtrc.json`                                             |
-| Lint              | [oxlint](https://oxc.rs/)                                                         | `.oxlintrc.json`                                            |
-| Unused code       | [knip](https://knip.dev/)                                                         | `knip.ts`                                                   |
-| Spelling          | [cspell](https://cspell.org/)                                                     | `cspell.json`                                               |
-| Secret scanning   | [secretlint](https://github.com/secretlint/secretlint)                            | `.secretlintrc.json`                                        |
-| Git hooks         | [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) + lint-staged | `package.json`, `.lintstagedrc.js`                          |
-| AI rules          | [rulesync](https://github.com/dyoshikawa/rulesync)                                | `rulesync.jsonc`, `.rulesync/`                              |
-| Workflow lint     | [actionlint](https://github.com/rhysd/actionlint)                                 | `.github/workflows/actionlint.yml`                          |
-| Action pinning    | [pinact](https://github.com/suzuki-shunsuke/pinact)                               | `.pinact.yaml`, `.github/workflows/pinact.yml`              |
-| Image scan        | [Trivy](https://trivy.dev/)                                                       | `.trivyignore`, `.github/workflows/trivy-security-scan.yml` |
-| Dev environment   | Dev Container                                                                     | `.devcontainer/`                                            |
-| Dependency bumps  | Dependabot                                                                        | `.github/dependabot.yml`                                    |
-| CI / Release      | GitHub Actions                                                                    | `.github/workflows/ci.yml`, `publish.yml`                   |
+| Area              | Tool                                                                                                           | Config                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Framework         | [TanStack Start](https://tanstack.com/start) + [React](https://react.dev/)                                     | `vite.config.ts`, `src/router.tsx`, `src/routes/`           |
+| Styling           | [Tailwind CSS v4](https://tailwindcss.com/)                                                                    | `src/styles.css`                                            |
+| Hosting           | [Cloudflare Workers](https://developers.cloudflare.com/workers/) (D1, Email Service, Rate Limiting, Turnstile) | `wrangler.jsonc`, `src/server.ts`                           |
+| Auth              | [Better Auth](https://www.better-auth.com/) (email OTP)                                                        | `src/lib/auth.ts`                                           |
+| Database          | [Drizzle ORM](https://orm.drizzle.team/) on D1                                                                 | `src/db/schema.ts`, `drizzle/`, `drizzle.config.ts`         |
+| Runtime / tooling | [mise](https://mise.jdx.dev/)                                                                                  | `mise.toml`                                                 |
+| Package manager   | [pnpm](https://pnpm.io/)                                                                                       | `pnpm-workspace.yaml`, `.npmrc`                             |
+| Language          | [TypeScript](https://www.typescriptlang.org/)                                                                  | `tsconfig.json`                                             |
+| Unit tests        | [Vitest](https://vitest.dev/) + Testing Library                                                                | `vitest.config.ts`                                          |
+| Browser tests     | [Playwright](https://playwright.dev/) against the built Worker in the Cloudflare emulator                      | `playwright.config.ts`, `e2e/`                              |
+| Format            | [oxfmt](https://oxc.rs/)                                                                                       | `.oxfmtrc.json`                                             |
+| Lint              | [oxlint](https://oxc.rs/)                                                                                      | `.oxlintrc.json`                                            |
+| Unused code       | [knip](https://knip.dev/)                                                                                      | `knip.ts`                                                   |
+| Spelling          | [cspell](https://cspell.org/)                                                                                  | `cspell.json`                                               |
+| Secret scanning   | [secretlint](https://github.com/secretlint/secretlint)                                                         | `.secretlintrc.json`                                        |
+| Git hooks         | [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) + lint-staged                              | `package.json`, `.lintstagedrc.js`                          |
+| AI rules          | [rulesync](https://github.com/dyoshikawa/rulesync)                                                             | `rulesync.jsonc`, `.rulesync/`                              |
+| Workflow lint     | [actionlint](https://github.com/rhysd/actionlint)                                                              | `.github/workflows/actionlint.yml`                          |
+| Action pinning    | [pinact](https://github.com/suzuki-shunsuke/pinact)                                                            | `.pinact.yaml`, `.github/workflows/pinact.yml`              |
+| Image scan        | [Trivy](https://trivy.dev/)                                                                                    | `.trivyignore`, `.github/workflows/trivy-security-scan.yml` |
+| Dev environment   | Dev Container                                                                                                  | `.devcontainer/`                                            |
+| Dependency bumps  | Dependabot                                                                                                     | `.github/dependabot.yml`                                    |
+| CI / Deploy       | GitHub Actions                                                                                                 | `.github/workflows/ci.yml`, `deploy.yml`                    |
 
 ## Getting started
 
 ```bash
 mise install       # install node, pnpm, actionlint, pinact
 pnpm install       # install dependencies and set up the pre-commit hook
-pnpm cicheck       # run everything CI runs
+pnpm db:migrate:local
+pnpm dev           # http://localhost:5173 — the sign-in code is printed in the terminal
+pnpm cicheck       # run everything CI runs (plus `pnpm e2e` for the browser tests)
 ```
+
+`pnpm dev` runs Vite's dev server: no email is sent (the code is logged) and Turnstile uses
+Cloudflare's always-passing test keys. The service worker — and so install and push notifications —
+only runs in the built app: `pnpm dev:cf` builds it and serves it in the Cloudflare emulator (workerd)
+at `http://localhost:4173` with a local D1. Copy `.dev.vars.example` to `.dev.vars` for local
+variables; `pnpm dev:cf --vars .dev.vars.e2e` switches Turnstile off and fixes the sign-in code to
+`123456`.
 
 Then rename the project:
 
 1. `package.json` — `name`, `description`, `keywords`, `homepage`, `bugs`, `repository`
-2. `README.md` — this file
-3. `LICENSE` — copyright holder, if it isn't you
-4. `.github/dependabot.yml` — `assignees`
-5. `.rulesync/rules/overview.md` — the project overview handed to AI coding agents
-6. `src/index.ts` — replace the sample export
+2. `src/lib/app.ts` — `APP_NAME`
+3. `wrangler.jsonc` — `name`, `database_name`, and the `vars`
+4. `public/manifest.webmanifest`, `public/offline.html`, `public/sw.js` — the name, colors and cache names
+5. `scripts/generate-icons.mjs` and `src/components/logo.tsx` — the icon; run `pnpm icons`
+6. `README.md` — this file; `LICENSE` — the copyright holder, if it isn't you
+7. `.github/dependabot.yml` — `assignees`
+8. `.rulesync/rules/overview.md` — the project overview handed to AI coding agents
+9. `.devcontainer/devcontainer.json` — the `TS_TEMPLATE_DEVCONTAINER_*` prefix
+
+## Deploy to Cloudflare
+
+1. Create the database and put its id in `wrangler.jsonc` (`database_id`):
+   `pnpm exec wrangler d1 create ts-template`, then `pnpm db:migrate:remote`.
+2. Onboard the sender domain to Cloudflare Email Service (Dashboard → Email → Email Sending) and set
+   `EMAIL_FROM` in `wrangler.jsonc`.
+3. Create a Turnstile widget for your hostnames, put its site key in `TURNSTILE_SITE_KEY` and its
+   secret in the `TURNSTILE_SECRET_KEY` secret.
+4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in `wrangler.jsonc`, the private
+   key in the `VAPID_PRIVATE_KEY` secret, and a contact in `VAPID_SUBJECT`.
+5. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
+
+   | Secret                 | Purpose                                                          |
+   | ---------------------- | ---------------------------------------------------------------- |
+   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`). Required.     |
+   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens; unset means the test keys.            |
+   | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.      |
+   | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone. |
+
+6. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
+   add the `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template plus Account → D1 → Edit)
+   and `CLOUDFLARE_ACCOUNT_ID` repository secrets and run the Deploy workflow, or switch it to run on
+   every push (see the comment at the top of `.github/workflows/deploy.yml`).
+
+To serve the app from your own hostname, uncomment `routes` in `wrangler.jsonc`.
+
+## Sending push notifications
+
+```ts
+import { notifyUser } from "./lib/push";
+
+// From a server function, route handler or scheduled handler:
+await notifyUser({
+  userId,
+  notification: { title: "Your report is ready", body: "Tap to open it.", url: "/reports/42" },
+});
+```
+
+The service worker shows the notification and opens `url` (a path on this app) when it is tapped.
+Subscription endpoints are accepted only from the known push services (`src/lib/push.ts`), so a
+client cannot make the Worker POST to an arbitrary address. The test button on the account page is
+capped by the `PUSH_TEST_LIMITER` rate limit binding.
 
 ## Scripts
 
-| Script                 | Description                                               |
-| ---------------------- | --------------------------------------------------------- |
-| `pnpm build`           | Build ESM + CJS bundles and type declarations into `dist` |
-| `pnpm check`           | `fmt:check` + `oxlint` + `typecheck`                      |
-| `pnpm cicheck`         | `cicheck:code` + `cicheck:content` — what CI runs         |
-| `pnpm cicheck:code`    | `check` + `test`                                          |
-| `pnpm cicheck:content` | `cspell` + `secretlint`                                   |
-| `pnpm fix`             | Auto-fix formatting and lint problems                     |
-| `pnpm generate`        | Regenerate AI tool configs from `.rulesync/`              |
-| `pnpm knip`            | Report unused files, exports, and dependencies            |
-| `pnpm test`            | Run the test suite                                        |
-| `pnpm test:coverage`   | Run the test suite with coverage                          |
-| `pnpm typecheck`       | Type-check without emitting                               |
+| Script                   | Description                                                                             |
+| ------------------------ | --------------------------------------------------------------------------------------- |
+| `pnpm dev`               | Vite dev server                                                                         |
+| `pnpm dev:cf`            | Build and serve the Worker in the Cloudflare emulator (`--fresh` wipes the local state) |
+| `pnpm build`             | Build the client assets and the Worker into `dist`                                      |
+| `pnpm run deploy`        | Build and deploy to Cloudflare Workers                                                  |
+| `pnpm check`             | `fmt:check` + `oxlint` + `typecheck`                                                    |
+| `pnpm cicheck`           | `cicheck:code` + `cicheck:content`                                                      |
+| `pnpm cicheck:code`      | `check` + `test`                                                                        |
+| `pnpm cicheck:content`   | `cspell` + `secretlint`                                                                 |
+| `pnpm test`              | Run the unit tests                                                                      |
+| `pnpm e2e`               | Run the browser tests against the built Worker in the emulator                          |
+| `pnpm db:generate`       | Generate a migration from `src/db/schema.ts` (`--name <change>`)                        |
+| `pnpm db:migrate:local`  | Apply migrations to the local D1                                                        |
+| `pnpm db:migrate:remote` | Apply migrations to the deployed D1                                                     |
+| `pnpm db:reset:local`    | Wipe the local D1 and migrate again                                                     |
+| `pnpm cf-typegen`        | Regenerate `worker-configuration.d.ts` after changing bindings                          |
+| `pnpm icons`             | Redraw the PWA icons                                                                    |
+| `pnpm vapid`             | Print a new VAPID key pair for push notifications                                       |
+| `pnpm fix`               | Auto-fix formatting and lint problems                                                   |
+| `pnpm generate`          | Regenerate AI tool configs from `.rulesync/`                                            |
+| `pnpm knip`              | Report unused files, exports, and dependencies                                          |
 
 ## mise tasks
 
@@ -110,14 +201,6 @@ Rules live in `.rulesync/` and are compiled into each tool's native format by `p
 
 Generated files (`AGENTS.md`, `CLAUDE.md`, `.claude/`, `.github/instructions/`, …) are gitignored —
 edit `.rulesync/**` instead, never the generated output.
-
-## Publishing
-
-`.github/workflows/publish.yml` publishes to npm when a `v*.*.*` tag is pushed. It verifies the tag
-matches `package.json`'s version, runs `pnpm cicheck`, builds, and publishes via
-[npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (OIDC — no npm token in secrets).
-Configure the trusted publisher on npm before the first release, or delete the workflow if the
-package is not published.
 
 ## License
 

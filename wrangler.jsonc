@@ -1,0 +1,58 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ts-template",
+  "compatibility_date": "2026-09-18",
+  "compatibility_flags": ["nodejs_compat"],
+  // Wraps TanStack Start's handler to add the security headers.
+  "main": "src/server.ts",
+  // To serve the app from your own hostname (a Custom Domain: DNS and the
+  // certificate are set up by `wrangler deploy`), uncomment and edit this.
+  // wrangler switches the workers.dev address off once routes exist unless
+  // `workers_dev` stays true.
+  // "routes": [{ "pattern": "app.example.com", "custom_domain": true }],
+  // "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Sender of the sign-in code emails. The domain must be onboarded to
+    // Cloudflare Email Service (Dashboard → Email → Email Sending).
+    "EMAIL_FROM": "no-reply@example.com",
+    // Public site key of the Cloudflare Turnstile widget that guards the
+    // sign-in mailer and account deletion (Dashboard → Turnstile). Pair it
+    // with the TURNSTILE_SECRET_KEY secret. Leave it empty to use Cloudflare's
+    // always-passing test keys.
+    "TURNSTILE_SITE_KEY": "",
+    // Public half of the VAPID key pair push notifications are signed with
+    // (`pnpm vapid` prints a pair). Pair it with the VAPID_PRIVATE_KEY
+    // secret. Leave it empty to switch push notifications off.
+    "VAPID_PUBLIC_KEY": "",
+    // Who push services contact about this sender: a `mailto:` or `https:` URL.
+    "VAPID_SUBJECT": "mailto:admin@example.com"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ts-template",
+      // Replace with the id `wrangler d1 create ts-template` prints. Local runs
+      // (`pnpm dev`, `pnpm dev:cf`, `pnpm e2e`) work without a real one.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Drizzle writes its migrations here; `wrangler d1 migrations apply` reads the .sql files.
+      "migrations_dir": "drizzle"
+    }
+  ],
+  // Caps how often one user may send themselves a test notification
+  // (src/lib/push-functions.ts). The period is 10 or 60 seconds.
+  "ratelimits": [
+    {
+      "name": "PUSH_TEST_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 3, "period": 60 }
+    }
+  ],
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ]
+}

@@ -1,6 +1,12 @@
 {
   "$schema": "https://github.com/dyoshikawa/rulesync/releases/latest/download/permissions-schema.json",
-  "permission": {},
+  "permission": {
+    "bash": {
+      "pnpm run deploy": "allow",
+      "pnpm run deploy *": "allow",
+      "pnpm run db:migrate:remote": "allow"
+    }
+  },
   "codexcli": {
     "base_permission_profile": ":danger-full-access",
     "approvals_reviewer": "auto_review",

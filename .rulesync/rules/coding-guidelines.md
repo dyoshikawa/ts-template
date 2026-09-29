@@ -2,7 +2,7 @@
 root: false
 targets: ["*"]
 description: "When you write any code, must follow these guidelines."
-globs: ["**/*.ts"]
+globs: ["**/*.ts", "**/*.tsx"]
 ---
 
 # Coding Guidelines

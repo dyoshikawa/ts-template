@@ -1,0 +1,20 @@
+# Copy to `.dev.vars` (git-ignored). Read by `pnpm dev` and `pnpm dev:cf`;
+# the deployed Worker gets these through `wrangler secret put` instead.
+
+# Turnstile. Leave both unset to use Cloudflare's always-passing test keys,
+# or set TURNSTILE_DISABLED=1 to render no widget at all (browser tests).
+#TURNSTILE_SITE_KEY=
+#TURNSTILE_SECRET_KEY=
+#TURNSTILE_DISABLED=1
+
+# A fixed sign-in code instead of a random one. Local runs only.
+#E2E_SIGN_IN_CODE=123456
+
+# Comma-separated addresses allowed to sign in; unset lets anybody in.
+#ALLOWED_EMAILS=
+
+# Push notifications: a pair from `pnpm vapid`. The public key overrides the
+# empty one in wrangler.jsonc; unset leaves push notifications off. They only
+# work in the built app (`pnpm dev:cf`), which registers the service worker.
+#VAPID_PUBLIC_KEY=
+#VAPID_PRIVATE_KEY=
