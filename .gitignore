@@ -250,3 +250,6 @@ rulesync.local.jsonc
 /test-results/
 /playwright-report/
 
+
+# cf CLI build output
+.cloudflare/
