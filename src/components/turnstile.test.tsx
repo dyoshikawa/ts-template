@@ -11,10 +11,22 @@ afterEach(() => {
 describe("Turnstile", () => {
   it("hands out a placeholder token and renders nothing when disabled", async () => {
     const onToken = vi.fn();
-    const { container } = render(<Turnstile siteKey="" onToken={onToken} />);
+    const { container } = render(<Turnstile config={{ status: "disabled" }} onToken={onToken} />);
     await act(async () => {});
     expect(container.innerHTML).toBe("");
     expect(onToken).toHaveBeenCalledWith("turnstile-disabled");
+    expect(document.querySelector("script[src*='challenges.cloudflare.com']")).toBeNull();
+  });
+
+  it("hands out no token and says so when the server has no key pair", async () => {
+    const onToken = vi.fn();
+    const { getByRole } = render(
+      <Turnstile config={{ status: "unconfigured" }} onToken={onToken} />,
+    );
+    await act(async () => {});
+    expect(getByRole("alert").textContent).toContain("unavailable");
+    expect(onToken).toHaveBeenCalledWith(null);
+    expect(onToken).not.toHaveBeenCalledWith(expect.any(String));
     expect(document.querySelector("script[src*='challenges.cloudflare.com']")).toBeNull();
   });
 
@@ -33,7 +45,9 @@ describe("Turnstile", () => {
       remove,
     };
     const onToken = vi.fn();
-    const { unmount } = render(<Turnstile siteKey="0xSITE" onToken={onToken} />);
+    const { unmount } = render(
+      <Turnstile config={{ status: "enabled", siteKey: "0xSITE" }} onToken={onToken} />,
+    );
     await act(async () => {});
     expect(options).not.toBeNull();
     expect(options!.sitekey).toBe("0xSITE");

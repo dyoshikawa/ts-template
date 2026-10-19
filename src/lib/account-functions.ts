@@ -1,17 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
-import { eq, like } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import * as z from "zod/mini";
 
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
 import { createAuth } from "./auth";
-import { turnstileSiteKey, verifyTurnstile } from "./turnstile";
+import { otpIdentifiers } from "./otp-identifiers";
+import {
+  logTurnstileUnconfigured,
+  turnstileClientConfig,
+  turnstileConfig,
+  verifyTurnstile,
+} from "./turnstile";
 
-/** The site key the Turnstile widgets render with; public, so no session is needed. */
-export const getTurnstileSiteKey = createServerFn({ method: "GET" }).handler(async () => {
-  return { turnstileSiteKey: turnstileSiteKey({ request: getRequest() }) };
+/** What the Turnstile widgets render from (never the secret); public, so no session is needed. */
+export const getTurnstileConfig = createServerFn({ method: "GET" }).handler(async () => {
+  return { turnstile: turnstileClientConfig({ request: getRequest() }) };
 });
 
 /**
@@ -30,6 +36,12 @@ export const deleteAccount = createServerFn({ method: "POST" })
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) {
       throw new Response("Unauthorized", { status: 401 });
+    }
+    if (turnstileConfig({ request }).status === "unconfigured") {
+      logTurnstileUnconfigured();
+      throw new Response("Account deletion is not available: Turnstile is not set up", {
+        status: 503,
+      });
     }
     const verified = await verifyTurnstile({
       request,
@@ -52,7 +64,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
       db.delete(schema.account).where(eq(schema.account.userId, userId)),
       db
         .delete(schema.verification)
-        .where(like(schema.verification.identifier, `%-otp-${session.user.email}`)),
+        .where(inArray(schema.verification.identifier, otpIdentifiers(session.user.email))),
       db.delete(schema.user).where(eq(schema.user.id, userId)),
     ]);
   });

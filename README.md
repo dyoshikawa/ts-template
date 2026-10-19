@@ -100,7 +100,8 @@ Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does 
 2. Onboard the sender domain to Cloudflare Email Service (Dashboard → Email → Email Sending) and set
    `EMAIL_FROM` in `wrangler.jsonc`.
 3. Create a Turnstile widget for your hostnames, put its site key in `TURNSTILE_SITE_KEY` and its
-   secret in the `TURNSTILE_SECRET_KEY` secret.
+   secret in the `TURNSTILE_SECRET_KEY` secret. The test keys are only used on local runs; without a
+   real pair the deployed app refuses sign-in and account deletion.
 4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in `wrangler.jsonc`, the private
    key in the `VAPID_PRIVATE_KEY` secret, and a contact in `VAPID_SUBJECT`.
 5. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
@@ -108,7 +109,7 @@ Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does 
    | Secret                 | Purpose                                                          |
    | ---------------------- | ---------------------------------------------------------------- |
    | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`). Required.     |
-   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens; unset means the test keys.            |
+   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens. Required: unset, every token fails.   |
    | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.      |
    | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone. |
 

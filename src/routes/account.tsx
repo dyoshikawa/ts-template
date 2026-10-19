@@ -4,7 +4,7 @@ import { type FormEvent, useState } from "react";
 import { NotificationSettings } from "../components/notification-settings";
 import { Turnstile } from "../components/turnstile";
 import { dangerButtonClass } from "../components/ui";
-import { deleteAccount, getTurnstileSiteKey } from "../lib/account-functions";
+import { deleteAccount, getTurnstileConfig } from "../lib/account-functions";
 import { APP_NAME } from "../lib/app";
 import { disableNotifications } from "../lib/push-client";
 import { getPushConfig } from "../lib/push-functions";
@@ -16,11 +16,11 @@ export const Route = createFileRoute("/account")({
     }
   },
   loader: async () => {
-    const [{ turnstileSiteKey }, { vapidPublicKey }] = await Promise.all([
-      getTurnstileSiteKey(),
+    const [{ turnstile }, { vapidPublicKey }] = await Promise.all([
+      getTurnstileConfig(),
       getPushConfig(),
     ]);
-    return { turnstileSiteKey, vapidPublicKey };
+    return { turnstile, vapidPublicKey };
   },
   head: () => ({ meta: [{ title: `Account — ${APP_NAME}` }] }),
   component: AccountPage,
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/account")({
 
 function AccountPage() {
   const { session } = Route.useRouteContext();
-  const { turnstileSiteKey, vapidPublicKey } = Route.useLoaderData();
+  const { turnstile, vapidPublicKey } = Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
   const [understood, setUnderstood] = useState(false);
@@ -83,7 +83,7 @@ function AccountPage() {
             />
             I understand that all my data will be deleted and cannot be restored
           </label>
-          {understood ? <Turnstile siteKey={turnstileSiteKey} onToken={setToken} /> : null}
+          {understood ? <Turnstile config={turnstile} onToken={setToken} /> : null}
           <button
             type="submit"
             disabled={!understood || !token || pending}

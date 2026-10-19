@@ -14,7 +14,10 @@ declare namespace Cloudflare {
      * signed with; unset switches push notifications off.
      */
     VAPID_PRIVATE_KEY?: string;
-    /** Turnstile secret matching `TURNSTILE_SITE_KEY`; unset means the test keys. */
+    /**
+     * Turnstile secret matching `TURNSTILE_SITE_KEY`. Unset, local runs use
+     * the test keys and a deployed Worker refuses every token.
+     */
     TURNSTILE_SECRET_KEY?: string;
     /**
      * `1` switches Turnstile off: no widget, every token verifies. Local runs
