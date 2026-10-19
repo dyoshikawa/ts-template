@@ -21,8 +21,8 @@
     // Public site key of the Cloudflare Turnstile widget that guards the
     // sign-in mailer and account deletion (Dashboard → Turnstile). Pair it
     // with the TURNSTILE_SECRET_KEY secret. Left empty, local runs use
-    // Cloudflare's always-passing test keys and the deployed Worker refuses
-    // every sign-in code request until a real pair is set.
+    // Cloudflare's always-passing test keys; the deployed Worker refuses
+    // sign-in and account deletion until a real pair is set.
     "TURNSTILE_SITE_KEY": "",
     // Public half of the VAPID key pair push notifications are signed with
     // (`pnpm vapid` prints a pair). Pair it with the VAPID_PRIVATE_KEY

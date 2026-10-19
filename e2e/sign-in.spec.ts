@@ -31,3 +31,25 @@ test("the code step asks no second challenge and offers no resend", async ({ pag
   await expect(page.getByRole("textbox", { name: "Email address" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Send code" })).toBeVisible();
 });
+
+test("the password-reset endpoints of the email OTP plugin are switched off", async ({
+  request,
+}) => {
+  for (const path of [
+    "/api/auth/email-otp/request-password-reset",
+    "/api/auth/forget-password/email-otp",
+    "/api/auth/email-otp/reset-password",
+  ]) {
+    const response = await request.post(path, {
+      data: { email: "someone@example.com", otp: "123456", password: "password1234" },
+    });
+    expect(response.status(), path).toBe(404);
+  }
+});
+
+test("only sign-in codes can be requested", async ({ request }) => {
+  const response = await request.post("/api/auth/email-otp/send-verification-otp", {
+    data: { email: "someone@example.com", type: "forget-password" },
+  });
+  expect(response.status()).toBe(400);
+});

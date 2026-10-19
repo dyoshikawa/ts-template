@@ -1,16 +1,16 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { createAuthMiddleware } from "better-auth/api";
 import { captcha, emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { env } from "cloudflare:workers";
 
 import { createDb } from "../db/client";
 import { APP_NAME } from "./app";
+import { DISABLED_AUTH_PATHS, guardAuthRequest, SEND_OTP_PATH } from "./auth-guard";
 import { isLocalRequest } from "./local-request";
 import { buildOtpEmail } from "./otp-email";
-import { isEmailAllowed } from "./sign-in-allowlist";
-import { turnstileDisabled, turnstileSecretKey } from "./turnstile";
+import { turnstileConfig } from "./turnstile";
 
 const OTP_LENGTH = 6;
 const OTP_EXPIRES_IN_SECONDS = 10 * 60;
@@ -18,17 +18,6 @@ const OTP_EXPIRES_IN_SECONDS = 10 * 60;
 // for a long time and slid forward once a day while the user keeps coming back.
 const SESSION_EXPIRES_IN_SECONDS = 90 * 24 * 60 * 60;
 const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
-const SIGN_IN_PATHS = new Set(["/email-otp/send-verification-otp", "/sign-in/email-otp"]);
-// The email OTP plugin also mounts password-reset endpoints that mail a code
-// to any existing address, guarded by neither Turnstile nor `ALLOWED_EMAILS`.
-// The app signs in with codes only (there are no passwords), so they are
-// switched off; Better Auth answers 404 for them.
-const DISABLED_PATHS = [
-  "/email-otp/request-password-reset",
-  "/forget-password/email-otp",
-  "/email-otp/reset-password",
-];
-
 // Only ever used by `vite dev`, where there is no `wrangler secret`.
 const DEV_SECRET = "insecure-dev-only-secret-do-not-use-in-production";
 
@@ -42,10 +31,11 @@ const DEV_SECRET = "insecure-dev-only-secret-do-not-use-in-production";
  * registered on the spot — unless `ALLOWED_EMAILS` restricts who may sign in.
  */
 export function createAuth({ request }: { request: Request }) {
+  const turnstile = turnstileConfig({ request });
   return betterAuth({
     baseURL: new URL(request.url).origin,
     secret: env.BETTER_AUTH_SECRET ?? (import.meta.env.DEV ? DEV_SECRET : undefined),
-    disabledPaths: DISABLED_PATHS,
+    disabledPaths: DISABLED_AUTH_PATHS,
     database: drizzleAdapter(createDb({ d1: env.DB }), { provider: "sqlite" }),
     session: {
       expiresIn: SESSION_EXPIRES_IN_SECONDS,
@@ -70,32 +60,26 @@ export function createAuth({ request }: { request: Request }) {
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     },
     hooks: {
-      // Addresses outside `ALLOWED_EMAILS` get neither a code nor a session.
+      // Allowlist, sign-in codes only, and no codes at all from a Worker
+      // without a Turnstile key pair (see `guardAuthRequest`).
       before: createAuthMiddleware(async (ctx) => {
-        if (!SIGN_IN_PATHS.has(ctx.path)) {
-          return;
-        }
-        const email: unknown = ctx.body?.email;
-        if (typeof email === "string" && !isEmailAllowed(email)) {
-          throw new APIError("FORBIDDEN", { message: "This email address cannot sign in." });
-        }
+        guardAuthRequest({ path: ctx.path, body: ctx.body, turnstile });
       }),
     },
     plugins: [
       // Sending a sign-in code needs a passed Turnstile challenge (the
       // `x-captcha-response` header), so the mailer cannot be driven by bots.
-      // Local runs and browser tests can switch this off (`TURNSTILE_DISABLED`).
-      ...(turnstileDisabled({ request })
-        ? []
-        : [
+      // Local runs and browser tests can switch this off (`TURNSTILE_DISABLED`);
+      // without a key pair the endpoint is refused outright (`guardAuthRequest`).
+      ...(turnstile.status === "enabled"
+        ? [
             captcha({
               provider: "cloudflare-turnstile",
-              // Unset on a deployed Worker, the plugin refuses every guarded
-              // request rather than letting it through.
-              secretKey: turnstileSecretKey({ request }) ?? "",
-              endpoints: ["/email-otp/send-verification-otp"],
+              secretKey: turnstile.secretKey,
+              endpoints: [SEND_OTP_PATH],
             }),
-          ]),
+          ]
+        : []),
       emailOTP({
         otpLength: OTP_LENGTH,
         expiresIn: OTP_EXPIRES_IN_SECONDS,
@@ -103,9 +87,8 @@ export function createAuth({ request }: { request: Request }) {
         // ever for a local address; otherwise Better Auth draws a random one.
         generateOTP: () => (isLocalRequest(request) && env.E2E_SIGN_IN_CODE) || undefined,
         sendVerificationOTP: async ({ email, otp, type }) => {
-          // Only sign-in codes are ever mailed: other kinds (email
-          // verification, password reset) are not part of the app's flow and
-          // would reach the mailer without the sign-in checks.
+          // Only sign-in codes are ever mailed (also refused earlier by
+          // `guardAuthRequest`); other kinds are not part of the app's flow.
           if (type !== "sign-in") {
             return;
           }

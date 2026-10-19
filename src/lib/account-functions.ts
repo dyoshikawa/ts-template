@@ -8,11 +8,11 @@ import { createDb } from "../db/client";
 import * as schema from "../db/schema";
 import { createAuth } from "./auth";
 import { otpIdentifiers } from "./otp-identifiers";
-import { turnstileSiteKey, verifyTurnstile } from "./turnstile";
+import { turnstileClientConfig, verifyTurnstile } from "./turnstile";
 
-/** The site key the Turnstile widgets render with; public, so no session is needed. */
-export const getTurnstileSiteKey = createServerFn({ method: "GET" }).handler(async () => {
-  return { turnstileSiteKey: turnstileSiteKey({ request: getRequest() }) };
+/** What the Turnstile widgets render from (never the secret); public, so no session is needed. */
+export const getTurnstileConfig = createServerFn({ method: "GET" }).handler(async () => {
+  return { turnstile: turnstileClientConfig({ request: getRequest() }) };
 });
 
 /**

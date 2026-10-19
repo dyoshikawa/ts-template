@@ -6,7 +6,7 @@ settings:
 
 overrides:
   '@modelcontextprotocol/sdk@<1.31.0': 1.31.0
-  smol-toml@<1.9.0: ^1.9.0
+  smol-toml@<1.9.0: 1.9.1
 
 importers:
 

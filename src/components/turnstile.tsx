@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 
+import type { TurnstileClientConfig } from "../lib/turnstile";
+
 const SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 type TurnstileApi = {
@@ -56,17 +58,20 @@ const DISABLED_TOKEN = "turnstile-disabled";
 /**
  * A Cloudflare Turnstile widget. `onToken` receives a token once the
  * challenge passes and `null` when it expires or fails, so the caller can
- * enable and disable the action it guards. With an empty `siteKey`
- * (Turnstile disabled on the server) nothing is rendered and a placeholder
- * token is handed out at once.
+ * enable and disable the action it guards. While Turnstile is disabled on the
+ * server (a local run) nothing is rendered and a placeholder token is handed
+ * out at once; on a server without a key pair no token is ever handed out and
+ * a notice says the action is unavailable.
  */
 export function Turnstile({
-  siteKey,
+  config,
   onToken,
 }: {
-  siteKey: string;
+  config: TurnstileClientConfig;
   onToken: (token: string | null) => void;
 }) {
+  const siteKey = config.status === "enabled" ? config.siteKey : "";
+  const { status } = config;
   const container = useRef<HTMLDivElement>(null);
   const latestOnToken = useRef(onToken);
 
@@ -75,8 +80,12 @@ export function Turnstile({
   }, [onToken]);
 
   useEffect(() => {
-    if (siteKey === "") {
+    if (status === "disabled") {
       latestOnToken.current(DISABLED_TOKEN);
+      return;
+    }
+    if (status === "unconfigured") {
+      latestOnToken.current(null);
       return;
     }
     let widgetId: string | null = null;
@@ -110,10 +119,17 @@ export function Turnstile({
         window.turnstile?.remove(widgetId);
       }
     };
-  }, [siteKey]);
+  }, [status, siteKey]);
 
-  if (siteKey === "") {
+  if (status === "disabled") {
     return null;
+  }
+  if (status === "unconfigured") {
+    return (
+      <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        This action is unavailable: the verification check is not set up on this server.
+      </p>
+    );
   }
   return <div ref={container} className="min-h-16" />;
 }

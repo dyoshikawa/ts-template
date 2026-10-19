@@ -3,7 +3,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 
 import { Turnstile } from "../components/turnstile";
 import { inputClass, linkButtonClass, primaryButtonClass } from "../components/ui";
-import { getTurnstileSiteKey } from "../lib/account-functions";
+import { getTurnstileConfig } from "../lib/account-functions";
 import { authClient } from "../lib/auth-client";
 
 export const Route = createFileRoute("/login")({
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/login")({
       throw redirect({ to: "/" });
     }
   },
-  loader: () => getTurnstileSiteKey(),
+  loader: () => getTurnstileConfig(),
   component: LoginPage,
 });
 
@@ -21,7 +21,7 @@ type Step = { name: "email" } | { name: "otp"; email: string };
 function LoginPage() {
   const router = useRouter();
   const navigate = useNavigate();
-  const { turnstileSiteKey } = Route.useLoaderData();
+  const { turnstile } = Route.useLoaderData();
   const [step, setStep] = useState<Step>({ name: "email" });
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -52,9 +52,7 @@ function LoginPage() {
     setStep({ name: "otp", email });
   };
 
-  const challenge = (
-    <Turnstile key={captchaRound} siteKey={turnstileSiteKey} onToken={setCaptcha} />
-  );
+  const challenge = <Turnstile key={captchaRound} config={turnstile} onToken={setCaptcha} />;
 
   const verifyCode = async ({ email, otp }: { email: string; otp: string }) => {
     setPending(true);

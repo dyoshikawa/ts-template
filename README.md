@@ -101,7 +101,7 @@ Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does 
    `EMAIL_FROM` in `wrangler.jsonc`.
 3. Create a Turnstile widget for your hostnames, put its site key in `TURNSTILE_SITE_KEY` and its
    secret in the `TURNSTILE_SECRET_KEY` secret. The test keys are only used on local runs; without a
-   real pair the deployed app sends no sign-in codes.
+   real pair the deployed app refuses sign-in and account deletion.
 4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in `wrangler.jsonc`, the private
    key in the `VAPID_PRIVATE_KEY` secret, and a contact in `VAPID_SUBJECT`.
 5. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
