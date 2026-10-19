@@ -14,3 +14,7 @@ ignoreScripts: false
 # Refuse dependency versions published less than a day ago, so a compromised
 # release has time to be pulled before it lands in a lockfile.
 minimumReleaseAge: 1440 # 1 day
+# Transitive fixes for advisories in versions rulesync pins (dev only).
+overrides:
+  "@modelcontextprotocol/sdk@<1.31.0": 1.31.0
+  smol-toml@<1.9.0: ^1.9.0

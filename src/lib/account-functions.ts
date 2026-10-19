@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
-import { eq, like } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import * as z from "zod/mini";
 
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
 import { createAuth } from "./auth";
+import { otpIdentifiers } from "./otp-identifiers";
 import { turnstileSiteKey, verifyTurnstile } from "./turnstile";
 
 /** The site key the Turnstile widgets render with; public, so no session is needed. */
@@ -52,7 +53,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
       db.delete(schema.account).where(eq(schema.account.userId, userId)),
       db
         .delete(schema.verification)
-        .where(like(schema.verification.identifier, `%-otp-${session.user.email}`)),
+        .where(inArray(schema.verification.identifier, otpIdentifiers(session.user.email))),
       db.delete(schema.user).where(eq(schema.user.id, userId)),
     ]);
   });

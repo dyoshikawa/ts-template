@@ -4,7 +4,9 @@ import { isLocalRequest } from "./local-request";
 
 /**
  * Cloudflare's documented test keys: the widget always passes and the secret
- * always verifies. Used whenever no real key pair is configured (`vite dev`).
+ * always verifies. Stand-ins for an unconfigured key pair on local runs only
+ * (`vite dev`, the emulator); a deployed Worker without its own keys fails
+ * closed instead of silently letting every challenge pass.
  * https://developers.cloudflare.com/turnstile/troubleshooting/testing/
  */
 const TEST_SITE_KEY = "1x00000000000000000000AA";
@@ -22,19 +24,31 @@ export function turnstileDisabled({ request }: { request: Request }): boolean {
   );
 }
 
-/** The secret the widget tokens are verified with. */
-export function turnstileSecretKey(): string {
-  return env.TURNSTILE_SECRET_KEY || TEST_SECRET_KEY;
+/** Whether an unconfigured key falls back to the always-passing test keys. */
+function testKeysAllowed({ request }: { request: Request }): boolean {
+  return import.meta.env.DEV || isLocalRequest(request);
+}
+
+/**
+ * The secret the widget tokens are verified with, or `undefined` when none is
+ * configured on a deployed Worker — callers must then refuse every token.
+ */
+export function turnstileSecretKey({ request }: { request: Request }): string | undefined {
+  return env.TURNSTILE_SECRET_KEY || (testKeysAllowed({ request }) ? TEST_SECRET_KEY : undefined);
 }
 
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
-/** The site key the widget renders with; empty when Turnstile is disabled. */
+/**
+ * The site key the widget renders with; empty when Turnstile is disabled, or
+ * when none is configured on a deployed Worker (the server then refuses every
+ * token, as its secret is missing too).
+ */
 export function turnstileSiteKey({ request }: { request: Request }): string {
   if (turnstileDisabled({ request })) {
     return "";
   }
-  return env.TURNSTILE_SITE_KEY || TEST_SITE_KEY;
+  return env.TURNSTILE_SITE_KEY || (testKeysAllowed({ request }) ? TEST_SITE_KEY : "");
 }
 
 /** Whether a widget token is genuine, checked with Cloudflare; a token is single-use. */
@@ -50,8 +64,12 @@ export async function verifyTurnstile({
   if (turnstileDisabled({ request })) {
     return true;
   }
+  const secret = turnstileSecretKey({ request });
+  if (!secret) {
+    return false;
+  }
   const body = new URLSearchParams({
-    secret: turnstileSecretKey(),
+    secret,
     response: token,
   });
   if (remoteIp) {

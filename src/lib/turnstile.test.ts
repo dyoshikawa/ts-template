@@ -19,19 +19,38 @@ afterEach(() => {
     delete vars[key];
   }
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
+/** Runs as the deployed Worker does: not `vite dev` (Vitest sets `DEV`). */
+function asBuilt(): void {
+  vi.stubEnv("DEV", false);
+}
+
 describe("turnstile keys", () => {
-  it("falls back to Cloudflare's test keys when none are configured", () => {
+  it("falls back to Cloudflare's test keys on a local address when none are configured", () => {
+    asBuilt();
+    expect(turnstileSiteKey({ request: local })).toBe("1x00000000000000000000AA");
+    expect(turnstileSecretKey({ request: local })).toBe("1x0000000000000000000000000000000AA");
+  });
+
+  it("falls back to the test keys under `vite dev`", () => {
     expect(turnstileSiteKey({ request: deployed })).toBe("1x00000000000000000000AA");
-    expect(turnstileSecretKey()).toBe("1x0000000000000000000000000000000AA");
+    expect(turnstileSecretKey({ request: deployed })).toBe("1x0000000000000000000000000000000AA");
+  });
+
+  it("hands out no keys on a deployed Worker without a configured pair", () => {
+    asBuilt();
+    expect(turnstileSiteKey({ request: deployed })).toBe("");
+    expect(turnstileSecretKey({ request: deployed })).toBeUndefined();
   });
 
   it("uses the configured pair", () => {
     vars.TURNSTILE_SITE_KEY = "0xSITE";
     vars.TURNSTILE_SECRET_KEY = "0xSECRET";
     expect(turnstileSiteKey({ request: deployed })).toBe("0xSITE");
-    expect(turnstileSecretKey()).toBe("0xSECRET");
+    asBuilt();
+    expect(turnstileSecretKey({ request: deployed })).toBe("0xSECRET");
   });
 
   it("hands out no site key while disabled, but only to a local address", () => {
@@ -63,6 +82,16 @@ describe("verifyTurnstile", () => {
       response: "tok",
       remoteip: "203.0.113.5",
     });
+  });
+
+  it("refuses every token on a deployed Worker without a secret, without calling Cloudflare", async () => {
+    asBuilt();
+    const fetchMock = vi.fn(async () => Response.json({ success: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      verifyTurnstile({ request: deployed, token: "tok", remoteIp: null }),
+    ).resolves.toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("fails closed on a rejected token or a failed request", async () => {

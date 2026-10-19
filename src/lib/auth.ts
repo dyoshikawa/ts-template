@@ -19,6 +19,15 @@ const OTP_EXPIRES_IN_SECONDS = 10 * 60;
 const SESSION_EXPIRES_IN_SECONDS = 90 * 24 * 60 * 60;
 const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
 const SIGN_IN_PATHS = new Set(["/email-otp/send-verification-otp", "/sign-in/email-otp"]);
+// The email OTP plugin also mounts password-reset endpoints that mail a code
+// to any existing address, guarded by neither Turnstile nor `ALLOWED_EMAILS`.
+// The app signs in with codes only (there are no passwords), so they are
+// switched off; Better Auth answers 404 for them.
+const DISABLED_PATHS = [
+  "/email-otp/request-password-reset",
+  "/forget-password/email-otp",
+  "/email-otp/reset-password",
+];
 
 // Only ever used by `vite dev`, where there is no `wrangler secret`.
 const DEV_SECRET = "insecure-dev-only-secret-do-not-use-in-production";
@@ -36,6 +45,7 @@ export function createAuth({ request }: { request: Request }) {
   return betterAuth({
     baseURL: new URL(request.url).origin,
     secret: env.BETTER_AUTH_SECRET ?? (import.meta.env.DEV ? DEV_SECRET : undefined),
+    disabledPaths: DISABLED_PATHS,
     database: drizzleAdapter(createDb({ d1: env.DB }), { provider: "sqlite" }),
     session: {
       expiresIn: SESSION_EXPIRES_IN_SECONDS,
@@ -80,7 +90,9 @@ export function createAuth({ request }: { request: Request }) {
         : [
             captcha({
               provider: "cloudflare-turnstile",
-              secretKey: turnstileSecretKey(),
+              // Unset on a deployed Worker, the plugin refuses every guarded
+              // request rather than letting it through.
+              secretKey: turnstileSecretKey({ request }) ?? "",
               endpoints: ["/email-otp/send-verification-otp"],
             }),
           ]),
@@ -90,7 +102,13 @@ export function createAuth({ request }: { request: Request }) {
         // Browser tests sign in with a fixed code (`E2E_SIGN_IN_CODE`), only
         // ever for a local address; otherwise Better Auth draws a random one.
         generateOTP: () => (isLocalRequest(request) && env.E2E_SIGN_IN_CODE) || undefined,
-        sendVerificationOTP: async ({ email, otp }) => {
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          // Only sign-in codes are ever mailed: other kinds (email
+          // verification, password reset) are not part of the app's flow and
+          // would reach the mailer without the sign-in checks.
+          if (type !== "sign-in") {
+            return;
+          }
           await sendOtp({ email, otp });
         },
       }),
