@@ -8,16 +8,22 @@ export const SEND_OTP_PATH = "/email-otp/send-verification-otp";
 const SIGN_IN_PATHS = new Set([SEND_OTP_PATH, "/sign-in/email-otp"]);
 
 /**
- * Endpoints the email OTP plugin mounts that the app does not use: they mail
- * a password-reset code to any existing address, past Turnstile and
- * `ALLOWED_EMAILS`. The app signs in with codes only (there are no
- * passwords), so they are switched off with Better Auth's `disabledPaths`
- * (answered 404).
+ * Endpoints the email OTP plugin mounts outside the sign-in flow, switched
+ * off with Better Auth's `disabledPaths` (answered 404). The password-reset
+ * ones mail a code to any existing address past Turnstile and
+ * `ALLOWED_EMAILS` (the app has no passwords); `check-verification-otp`
+ * spends a sign-in code's attempts past the allowlist; the email-change and
+ * verification ones are unused. Re-enable one only together with the checks
+ * it needs.
  */
 export const DISABLED_AUTH_PATHS = [
   "/email-otp/request-password-reset",
   "/forget-password/email-otp",
   "/email-otp/reset-password",
+  "/email-otp/check-verification-otp",
+  "/email-otp/verify-email",
+  "/email-otp/request-email-change",
+  "/email-otp/change-email",
 ];
 
 /**

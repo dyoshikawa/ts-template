@@ -8,7 +8,12 @@ import { createDb } from "../db/client";
 import * as schema from "../db/schema";
 import { createAuth } from "./auth";
 import { otpIdentifiers } from "./otp-identifiers";
-import { turnstileClientConfig, verifyTurnstile } from "./turnstile";
+import {
+  logTurnstileUnconfigured,
+  turnstileClientConfig,
+  turnstileConfig,
+  verifyTurnstile,
+} from "./turnstile";
 
 /** What the Turnstile widgets render from (never the secret); public, so no session is needed. */
 export const getTurnstileConfig = createServerFn({ method: "GET" }).handler(async () => {
@@ -31,6 +36,12 @@ export const deleteAccount = createServerFn({ method: "POST" })
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) {
       throw new Response("Unauthorized", { status: 401 });
+    }
+    if (turnstileConfig({ request }).status === "unconfigured") {
+      logTurnstileUnconfigured();
+      throw new Response("Account deletion is not available: Turnstile is not set up", {
+        status: 503,
+      });
     }
     const verified = await verifyTurnstile({
       request,

@@ -32,13 +32,15 @@ test("the code step asks no second challenge and offers no resend", async ({ pag
   await expect(page.getByRole("button", { name: "Send code" })).toBeVisible();
 });
 
-test("the password-reset endpoints of the email OTP plugin are switched off", async ({
-  request,
-}) => {
+test("the email OTP endpoints outside the sign-in flow are switched off", async ({ request }) => {
   for (const path of [
     "/api/auth/email-otp/request-password-reset",
     "/api/auth/forget-password/email-otp",
     "/api/auth/email-otp/reset-password",
+    "/api/auth/email-otp/check-verification-otp",
+    "/api/auth/email-otp/verify-email",
+    "/api/auth/email-otp/request-email-change",
+    "/api/auth/email-otp/change-email",
   ]) {
     const response = await request.post(path, {
       data: { email: "someone@example.com", otp: "123456", password: "password1234" },
@@ -52,4 +54,5 @@ test("only sign-in codes can be requested", async ({ request }) => {
     data: { email: "someone@example.com", type: "forget-password" },
   });
   expect(response.status()).toBe(400);
+  expect(((await response.json()) as { message?: string }).message).toContain("Only sign-in codes");
 });

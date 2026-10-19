@@ -79,6 +79,16 @@ describe("guardAuthRequest", () => {
     ).toBeNull();
   });
 
+  it("lets a sign-in code request through while Turnstile is disabled locally", () => {
+    expect(
+      statusOf({
+        path: SEND_OTP_PATH,
+        body: { email: "ann@example.com", type: "sign-in" },
+        turnstile: { status: "disabled" },
+      }),
+    ).toBeNull();
+  });
+
   it("leaves other endpoints alone", () => {
     expect(
       statusOf({ path: "/get-session", body: undefined, turnstile: { status: "unconfigured" } }),
