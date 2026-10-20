@@ -46,6 +46,13 @@ async function newVapid() {
 const decode = (part: string): unknown =>
   JSON.parse(new TextDecoder().decode(base64UrlDecode(part)));
 
+const encrypt = () =>
+  encryptPayload({
+    payload: new TextEncoder().encode("hi"),
+    p256dh: RFC_8291.receiverPublic,
+    auth: RFC_8291.auth,
+  });
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -75,12 +82,6 @@ describe("encryptPayload", () => {
   });
 
   it("draws a fresh salt and sender key each time", async () => {
-    const encrypt = () =>
-      encryptPayload({
-        payload: new TextEncoder().encode("hi"),
-        p256dh: RFC_8291.receiverPublic,
-        auth: RFC_8291.auth,
-      });
     const [first, second] = await Promise.all([encrypt(), encrypt()]);
     expect(base64UrlEncode(first.slice(0, 16))).not.toBe(base64UrlEncode(second.slice(0, 16)));
     expect(base64UrlEncode(first.slice(21, 86))).not.toBe(base64UrlEncode(second.slice(21, 86)));
