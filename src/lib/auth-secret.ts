@@ -22,9 +22,10 @@ const MIN_SECRET_LENGTH = 32;
  * own package, and only refuses that when `NODE_ENV` is `production` — which
  * is never set in a Worker. Anybody could then forge a session cookie for any
  * user. So the deployed Worker fails closed instead: without a configured
- * secret of at least {@link MIN_SECRET_LENGTH} characters every auth request
- * throws. Local runs (`vite dev`, requests to a local address) fall back to a
- * fixed development secret.
+ * secret of at least {@link MIN_SECRET_LENGTH} characters this throws, and
+ * since the root route reads the session on every page load, every page
+ * answers with a server error until the secret is set. Local runs (`vite dev`,
+ * requests to a local address) fall back to a fixed development secret.
  */
 export function resolveAuthSecret({ request }: { request: Request }): string {
   // Used as given (an existing secret keeps verifying the cookies it signed);
@@ -33,7 +34,7 @@ export function resolveAuthSecret({ request }: { request: Request }): string {
   if (import.meta.env.DEV || isLocalRequest(request)) {
     return secret || DEV_SECRET;
   }
-  if (!secret || secret.length < MIN_SECRET_LENGTH) {
+  if (!secret || secret.trim().length < MIN_SECRET_LENGTH) {
     // oxlint-disable-next-line no-console
     console.error(
       `[auth] BETTER_AUTH_SECRET is not set or shorter than ${MIN_SECRET_LENGTH} characters; refusing the request`,

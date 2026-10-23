@@ -59,6 +59,9 @@ describe("resolveAuthSecret", () => {
   it("refuses a secret shorter than 32 characters on a deployed Worker", () => {
     vars.BETTER_AUTH_SECRET = "a".repeat(31);
     expect(() => resolveAuthSecret({ request: deployed })).toThrow();
+    // Padding a pasted value with a newline does not make it long enough.
+    vars.BETTER_AUTH_SECRET = `${"a".repeat(31)}\n`;
+    expect(() => resolveAuthSecret({ request: deployed })).toThrow();
     vars.BETTER_AUTH_SECRET = "a".repeat(32);
     expect(resolveAuthSecret({ request: deployed })).toBe("a".repeat(32));
   });

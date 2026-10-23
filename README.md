@@ -108,7 +108,7 @@ Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does 
 
    | Secret                 | Purpose                                                                                    |
    | ---------------------- | ------------------------------------------------------------------------------------------ |
-   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`, 32+ chars). Required: unset, auth fails. |
+   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`, 32+ chars). Required: unset, pages fail. |
    | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens. Required: unset, every token fails.                             |
    | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.                                |
    | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone.                           |

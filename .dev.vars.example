@@ -1,9 +1,11 @@
 # Copy to `.dev.vars` (git-ignored). Read by `pnpm dev` and `pnpm dev:cf`;
 # the deployed Worker gets these through `wrangler secret put` instead.
 
-# Signs session cookies. Optional here: local runs fall back to a fixed
-# development secret. The deployed Worker refuses every auth request without
-# one of at least 32 characters (`openssl rand -base64 48`).
+# Signs session cookies. Optional for requests from this machine, which fall
+# back to a fixed development secret; set one of at least 32 characters
+# (`openssl rand -base64 48`) to reach `pnpm dev:cf` from another device on
+# the network. The deployed Worker answers every page with a server error
+# without one.
 #BETTER_AUTH_SECRET=
 
 # Turnstile. Leave both unset to use Cloudflare's always-passing test keys
