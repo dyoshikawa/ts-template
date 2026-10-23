@@ -8,6 +8,7 @@ import { env } from "cloudflare:workers";
 import { createDb } from "../db/client";
 import { APP_NAME } from "./app";
 import { DISABLED_AUTH_PATHS, guardAuthRequest, SEND_OTP_PATH } from "./auth-guard";
+import { resolveAuthSecret } from "./auth-secret";
 import { isLocalRequest } from "./local-request";
 import { buildOtpEmail } from "./otp-email";
 import { turnstileConfig } from "./turnstile";
@@ -18,8 +19,6 @@ const OTP_EXPIRES_IN_SECONDS = 10 * 60;
 // for a long time and slid forward once a day while the user keeps coming back.
 const SESSION_EXPIRES_IN_SECONDS = 90 * 24 * 60 * 60;
 const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
-// Only ever used by `vite dev`, where there is no `wrangler secret`.
-const DEV_SECRET = "insecure-dev-only-secret-do-not-use-in-production";
 
 /**
  * Builds a Better Auth instance for one request. Bindings (D1, Email Service)
@@ -31,10 +30,12 @@ const DEV_SECRET = "insecure-dev-only-secret-do-not-use-in-production";
  * registered on the spot — unless `ALLOWED_EMAILS` restricts who may sign in.
  */
 export function createAuth({ request }: { request: Request }) {
+  // Throws on a deployed Worker without a usable secret (see `resolveAuthSecret`).
+  const secret = resolveAuthSecret({ request });
   const turnstile = turnstileConfig({ request });
   return betterAuth({
     baseURL: new URL(request.url).origin,
-    secret: env.BETTER_AUTH_SECRET ?? (import.meta.env.DEV ? DEV_SECRET : undefined),
+    secret,
     disabledPaths: DISABLED_AUTH_PATHS,
     database: drizzleAdapter(createDb({ d1: env.DB }), { provider: "sqlite" }),
     session: {
