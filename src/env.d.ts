@@ -2,7 +2,11 @@
 // them; declare them here on top of the generated `Env`.
 declare namespace Cloudflare {
   interface Env {
-    /** Signs session cookies. Required in production. */
+    /**
+     * Signs session cookies; at least 32 characters (`openssl rand -base64 48`).
+     * Required on the deployed Worker, which refuses every auth request
+     * without it; local runs fall back to a fixed development secret.
+     */
     BETTER_AUTH_SECRET?: string;
     /**
      * Comma-separated addresses allowed to sign in; unset lets anybody in.
