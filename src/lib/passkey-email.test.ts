@@ -1,0 +1,29 @@
+import { describe, expect, it } from "vitest";
+
+import { buildPasskeyAddedEmail } from "./passkey-email";
+
+describe("buildPasskeyAddedEmail", () => {
+  it("names the passkey and links to the account page", () => {
+    const email = buildPasskeyAddedEmail({
+      appName: "my-app",
+      passkeyName: "Safari on iPhone",
+      accountUrl: "https://app.example.com/account",
+    });
+
+    expect(email.subject).toBe("A passkey was added to your my-app account");
+    expect(email.text).toContain('"Safari on iPhone"');
+    expect(email.text).toContain("https://app.example.com/account");
+    expect(email.html).toContain('href="https://app.example.com/account"');
+  });
+
+  it("escapes HTML in the passkey name", () => {
+    const email = buildPasskeyAddedEmail({
+      appName: "my-app",
+      passkeyName: "<b>x</b>",
+      accountUrl: "https://example.com/account",
+    });
+
+    expect(email.html).not.toContain("<b>");
+    expect(email.html).toContain("&lt;b&gt;x&lt;/b&gt;");
+  });
+});

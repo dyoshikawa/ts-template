@@ -1,3 +1,4 @@
+/** A mail the app sends: subject plus plain-text and HTML bodies. */
 export type OtpEmail = {
   subject: string;
   text: string;
@@ -32,7 +33,7 @@ export function buildOtpEmail({
   return { subject, text, html };
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")

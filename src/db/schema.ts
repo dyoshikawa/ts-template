@@ -1,9 +1,9 @@
-// Better Auth's core tables (user, session, account, verification) as a Drizzle
+// Better Auth's tables (user, session, account, verification, passkey) as a Drizzle
 // schema. Generated with `better-auth generate` against the sqlite provider;
 // the email OTP plugin stores its codes in `verification`. Re-generate rather
 // than hand-editing when Better Auth is upgraded, then `pnpm db:generate`.
 import { relations, sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -89,6 +89,36 @@ export const verification = sqliteTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+/**
+ * Passkeys (the `@better-auth/passkey` plugin, src/lib/auth.ts): a user may
+ * hold several, one per password manager or security key. `name` is the
+ * app's label (`passkeyName`), never typed by the user.
+ */
+export const passkey = sqliteTable(
+  "passkey",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+    transports: text("transports"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }),
+    aaguid: text("aaguid"),
+  },
+  (table) => [
+    index("passkey_userId_idx").on(table.userId),
+    // Unique: a credential belongs to one account (WebAuthn §7.1 step 26), and
+    // sign-in looks a credential up by this id alone.
+    uniqueIndex("passkey_credentialID_idx").on(table.credentialID),
+  ],
+);
+
 /** Better Auth's request tally (`rateLimit.storage: "database"` in src/lib/auth.ts). */
 export const rateLimit = sqliteTable("rate_limit", {
   id: text("id").primaryKey(),
@@ -101,11 +131,19 @@ export const rateLimit = sqliteTable("rate_limit", {
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  passkeys: many(passkey),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
     fields: [session.userId],
+    references: [user.id],
+  }),
+}));
+
+export const passkeyRelations = relations(passkey, ({ one }) => ({
+  user: one(user, {
+    fields: [passkey.userId],
     references: [user.id],
   }),
 }));

@@ -9,6 +9,7 @@ interface __BaseEnv_Env {
   TURNSTILE_SITE_KEY: string;
   VAPID_PUBLIC_KEY: string;
   VAPID_SUBJECT: string;
+  PASSKEY_RP_ID: string;
 }
 declare namespace Cloudflare {
   interface GlobalProps {
@@ -22,7 +23,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 };
 declare namespace NodeJS {
   interface ProcessEnv extends StringifyValues<
-    Pick<Cloudflare.Env, "EMAIL_FROM" | "TURNSTILE_SITE_KEY" | "VAPID_PUBLIC_KEY" | "VAPID_SUBJECT">
+    Pick<Cloudflare.Env, "EMAIL_FROM" | "TURNSTILE_SITE_KEY" | "VAPID_PUBLIC_KEY" | "VAPID_SUBJECT" | "PASSKEY_RP_ID">
   > {}
 }
 

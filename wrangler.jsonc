@@ -11,6 +11,11 @@
   // `workers_dev` stays true.
   // "routes": [{ "pattern": "app.example.com", "custom_domain": true }],
   // "workers_dev": true,
+  // Nightly at 03:30 UTC: deletes expired sign-in codes and passkey
+  // challenges (`scheduled` in src/server.ts).
+  "triggers": {
+    "crons": ["30 3 * * *"]
+  },
   "observability": {
     "enabled": true
   },
@@ -29,7 +34,13 @@
     // secret. Leave it empty to switch push notifications off.
     "VAPID_PUBLIC_KEY": "",
     // Who push services contact about this sender: a `mailto:` or `https:` URL.
-    "VAPID_SUBJECT": "mailto:admin@example.com"
+    "VAPID_SUBJECT": "mailto:admin@example.com",
+    // The one hostname that offers passkeys: your custom domain (the `routes`
+    // pattern above), e.g. "app.example.com". A passkey is bound to one
+    // domain, so the workers.dev address and any other host sign in by email
+    // alone. Leave it empty to switch passkeys off on the deployed Worker;
+    // local runs on localhost:4173 / :5173 always offer them.
+    "PASSKEY_RP_ID": ""
   },
   "d1_databases": [
     {
