@@ -5,7 +5,7 @@
 // Cloudflare" for where each value comes from.
 //
 // Secrets never go in this file. Set them with `wrangler secret put <NAME>`:
-//   BETTER_AUTH_SECRET    required — `openssl rand -base64 48`
+//   BETTER_AUTH_SECRET    required, 32+ characters — `openssl rand -base64 48`
 //   TURNSTILE_SECRET_KEY  the secret of the widget below
 //   VAPID_PRIVATE_KEY     the private half of `pnpm vapid`
 //   ALLOWED_EMAILS        optional — comma-separated addresses allowed to sign in

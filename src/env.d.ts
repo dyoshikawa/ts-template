@@ -2,7 +2,13 @@
 // them; declare them here on top of the generated `Env`.
 declare namespace Cloudflare {
   interface Env {
-    /** Signs session cookies. Required in production. */
+    /**
+     * Signs session cookies; at least 32 characters (`openssl rand -base64 48`).
+     * Required on the deployed Worker, which answers every page with a server
+     * error without it; local runs fall back to a fixed development secret.
+     * Do not set Better Auth's `BETTER_AUTH_SECRETS` rotation list instead:
+     * it would take precedence over this secret and skip the length check.
+     */
     BETTER_AUTH_SECRET?: string;
     /**
      * Comma-separated addresses allowed to sign in; unset lets anybody in.

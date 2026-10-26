@@ -106,12 +106,12 @@ Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does 
    key in the `VAPID_PRIVATE_KEY` secret, and a contact in `VAPID_SUBJECT`.
 5. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
 
-   | Secret                 | Purpose                                                          |
-   | ---------------------- | ---------------------------------------------------------------- |
-   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`). Required.     |
-   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens. Required: unset, every token fails.   |
-   | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.      |
-   | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone. |
+   | Secret                 | Purpose                                                                                    |
+   | ---------------------- | ------------------------------------------------------------------------------------------ |
+   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`, 32+ chars). Required: unset, pages fail. |
+   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens. Required: unset, every token fails.                             |
+   | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.                                |
+   | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone.                           |
 
 6. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
    add the `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template plus Account → D1 → Edit)
