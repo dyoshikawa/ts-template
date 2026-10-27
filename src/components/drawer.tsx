@@ -45,7 +45,7 @@ export function Drawer({
       />
       <nav
         aria-label={title}
-        className={`absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl transition-transform duration-200 ease-out dark:bg-neutral-900 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl transition-[translate,transform,visibility] duration-200 ease-out dark:bg-neutral-900 ${open ? "translate-x-0" : "invisible -translate-x-full"}`}
       >
         <div className="flex min-h-14 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
           <span className="font-semibold">{title}</span>
