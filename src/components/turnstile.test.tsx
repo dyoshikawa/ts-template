@@ -11,7 +11,9 @@ afterEach(() => {
 describe("Turnstile", () => {
   it("hands out a placeholder token and renders nothing when disabled", async () => {
     const onToken = vi.fn();
-    const { container } = render(<Turnstile config={{ status: "disabled" }} onToken={onToken} />);
+    const { container } = render(
+      <Turnstile config={{ status: "disabled" }} action="sign-in" onToken={onToken} />,
+    );
     await act(async () => {});
     expect(container.innerHTML).toBe("");
     expect(onToken).toHaveBeenCalledWith("turnstile-disabled");
@@ -21,7 +23,7 @@ describe("Turnstile", () => {
   it("hands out no token and says so when the server has no key pair", async () => {
     const onToken = vi.fn();
     const { getByRole } = render(
-      <Turnstile config={{ status: "unconfigured" }} onToken={onToken} />,
+      <Turnstile config={{ status: "unconfigured" }} action="sign-in" onToken={onToken} />,
     );
     await act(async () => {});
     expect(getByRole("alert").textContent).toContain("unavailable");
@@ -30,10 +32,11 @@ describe("Turnstile", () => {
     expect(document.querySelector("script[src*='challenges.cloudflare.com']")).toBeNull();
   });
 
-  it("renders the widget with the site key and relays its callbacks", async () => {
+  it("renders the widget with the site key and action and relays its callbacks", async () => {
     const remove = vi.fn();
     let options: {
       sitekey: string;
+      action: string;
       callback: (token: string) => void;
       "expired-callback": () => void;
     } | null = null;
@@ -46,11 +49,16 @@ describe("Turnstile", () => {
     };
     const onToken = vi.fn();
     const { unmount } = render(
-      <Turnstile config={{ status: "enabled", siteKey: "0xSITE" }} onToken={onToken} />,
+      <Turnstile
+        config={{ status: "enabled", siteKey: "0xSITE" }}
+        action="delete-account"
+        onToken={onToken}
+      />,
     );
     await act(async () => {});
     expect(options).not.toBeNull();
     expect(options!.sitekey).toBe("0xSITE");
+    expect(options!.action).toBe("delete-account");
     act(() => {
       options!.callback("tok");
       options!["expired-callback"]();

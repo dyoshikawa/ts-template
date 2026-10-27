@@ -7,6 +7,7 @@ import {
   DISABLED_AUTH_PATHS,
   guardAuthRequest,
   SEND_OTP_PATH,
+  SIGN_IN_OTP_PATH,
   VERIFY_PASSKEY_REGISTRATION_PATH,
 } from "./auth-guard";
 import type { TurnstileConfig } from "./turnstile";
@@ -122,6 +123,24 @@ describe("DISABLED_AUTH_PATHS", () => {
       "/passkey/verify-authentication",
       ...AUTHORITATIVE_SESSION_PATHS,
     ]) {
+      expect(DISABLED_AUTH_PATHS).not.toContain(path);
+    }
+  });
+
+  it("switches off Better Auth's unused password, verification and account endpoints", () => {
+    for (const path of [
+      "/verify-email",
+      "/sign-in/email",
+      "/sign-up/email",
+      "/change-email",
+      "/delete-user",
+    ]) {
+      expect(DISABLED_AUTH_PATHS).toContain(path);
+    }
+  });
+
+  it("keeps the sign-in flow on", () => {
+    for (const path of [SEND_OTP_PATH, SIGN_IN_OTP_PATH, "/sign-out", "/get-session"]) {
       expect(DISABLED_AUTH_PATHS).not.toContain(path);
     }
   });

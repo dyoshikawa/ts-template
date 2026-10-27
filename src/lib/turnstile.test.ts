@@ -1,7 +1,12 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { turnstileClientConfig, turnstileConfig, verifyTurnstile } from "./turnstile";
+import {
+  turnstileBinding,
+  turnstileClientConfig,
+  turnstileConfig,
+  verifyTurnstile,
+} from "./turnstile";
 
 /** The stand-in `env` as a bag of variables; `TURNSTILE_SITE_KEY` is typed as always set. */
 const vars = env as unknown as Record<string, string | undefined>;
@@ -95,10 +100,17 @@ describe("verifyTurnstile", () => {
   it("asks Cloudflare with the secret, the token and the caller's address", async () => {
     vars.TURNSTILE_SITE_KEY = "0xSITE";
     vars.TURNSTILE_SECRET_KEY = "0xSECRET";
-    const fetchMock = vi.fn(async () => Response.json({ success: true }));
+    const fetchMock = vi.fn(async () =>
+      Response.json({ success: true, hostname: "app.example.com", action: "sign-in" }),
+    );
     vi.stubGlobal("fetch", fetchMock);
     await expect(
-      verifyTurnstile({ request: deployed, token: "tok", remoteIp: "203.0.113.5" }),
+      verifyTurnstile({
+        request: deployed,
+        token: "tok",
+        remoteIp: "203.0.113.5",
+        action: "sign-in",
+      }),
     ).resolves.toBe(true);
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://challenges.cloudflare.com/turnstile/v0/siteverify");
@@ -113,7 +125,7 @@ describe("verifyTurnstile", () => {
     const fetchMock = vi.fn(async () => Response.json({ success: true }));
     vi.stubGlobal("fetch", fetchMock);
     await expect(
-      verifyTurnstile({ request: deployed, token: "tok", remoteIp: null }),
+      verifyTurnstile({ request: deployed, token: "tok", remoteIp: null, action: "sign-in" }),
     ).resolves.toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(logged).toHaveBeenCalled();
@@ -124,16 +136,16 @@ describe("verifyTurnstile", () => {
       "fetch",
       vi.fn(async () => Response.json({ success: false })),
     );
-    await expect(verifyTurnstile({ request: local, token: "tok", remoteIp: null })).resolves.toBe(
-      false,
-    );
+    await expect(
+      verifyTurnstile({ request: local, token: "tok", remoteIp: null, action: "sign-in" }),
+    ).resolves.toBe(false);
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => new Response("", { status: 500 })),
     );
-    await expect(verifyTurnstile({ request: local, token: "tok", remoteIp: null })).resolves.toBe(
-      false,
-    );
+    await expect(
+      verifyTurnstile({ request: local, token: "tok", remoteIp: null, action: "sign-in" }),
+    ).resolves.toBe(false);
   });
 
   it("verifies anything while disabled locally, without calling Cloudflare", async () => {
@@ -143,13 +155,67 @@ describe("verifyTurnstile", () => {
     const fetchMock = vi.fn(async () => Response.json({ success: false }));
     vi.stubGlobal("fetch", fetchMock);
     await expect(
-      verifyTurnstile({ request: local, token: "whatever", remoteIp: null }),
+      verifyTurnstile({ request: local, token: "whatever", remoteIp: null, action: "sign-in" }),
     ).resolves.toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
     // Deployed, the same switch still verifies with Cloudflare.
     await expect(
-      verifyTurnstile({ request: deployed, token: "whatever", remoteIp: null }),
+      verifyTurnstile({ request: deployed, token: "whatever", remoteIp: null, action: "sign-in" }),
     ).resolves.toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("turnstileBinding", () => {
+  it("binds tokens to the deployed hostname, and not on local runs", () => {
+    expect(turnstileBinding({ request: deployed })).toEqual({
+      hostname: "app.example.com",
+    });
+    expect(turnstileBinding({ request: local })).toBeNull();
+    vi.stubEnv("DEV", true);
+    expect(turnstileBinding({ request: deployed })).toBeNull();
+  });
+});
+
+/** Makes Cloudflare's token check pass the token and report `result` with it. */
+function answer(result: object): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ success: true, ...result })),
+  );
+}
+
+/** Verifies a token for the account-deletion form on the deployed Worker. */
+function verify(): Promise<boolean> {
+  return verifyTurnstile({
+    request: deployed,
+    token: "tok",
+    remoteIp: null,
+    action: "delete-account",
+  });
+}
+
+describe("verifyTurnstile binding", () => {
+  it("refuses a token solved for another action or on another hostname", async () => {
+    vars.TURNSTILE_SITE_KEY = "0xSITE";
+    vars.TURNSTILE_SECRET_KEY = "0xSECRET";
+    answer({ hostname: "app.example.com", action: "delete-account" });
+    await expect(verify()).resolves.toBe(true);
+    answer({ hostname: "app.example.com", action: "sign-in" });
+    await expect(verify()).resolves.toBe(false);
+    answer({ hostname: "evil.example", action: "delete-account" });
+    await expect(verify()).resolves.toBe(false);
+    answer({});
+    await expect(verify()).resolves.toBe(false);
+  });
+
+  it("checks neither on a local run, where the test keys report none", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ success: true })),
+    );
+    await expect(
+      verifyTurnstile({ request: local, token: "tok", remoteIp: null, action: "delete-account" }),
+    ).resolves.toBe(true);
   });
 });

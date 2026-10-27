@@ -76,7 +76,12 @@ export const deleteAccount = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const request = getRequest();
     const auth = createAuth({ request });
-    const session = await auth.api.getSession({ headers: request.headers });
+    // Read from the database, not the 5-minute cookie cache: a session signed
+    // out or revoked elsewhere must not delete the account.
+    const session = await auth.api.getSession({
+      headers: request.headers,
+      query: { disableCookieCache: true },
+    });
     if (!session) {
       throw new Response("Unauthorized", { status: 401 });
     }
@@ -90,6 +95,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
       request,
       token: data.turnstileToken,
       remoteIp: request.headers.get("CF-Connecting-IP"),
+      action: "delete-account",
     });
     if (!verified) {
       throw new Response("Turnstile verification failed", { status: 400 });

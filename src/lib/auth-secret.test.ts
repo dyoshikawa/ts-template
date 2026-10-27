@@ -66,6 +66,15 @@ describe("resolveAuthSecret", () => {
     expect(resolveAuthSecret({ request: deployed })).toBe("a".repeat(32));
   });
 
+  it("refuses Better Auth's public default secret on a deployed Worker", () => {
+    vars.BETTER_AUTH_SECRET = "better-auth-secret-12345678901234567890";
+    expect(() => resolveAuthSecret({ request: deployed })).toThrow(
+      "BETTER_AUTH_SECRET is not configured",
+    );
+    vars.BETTER_AUTH_SECRET = " better-auth-secret-12345678901234567890\n";
+    expect(() => resolveAuthSecret({ request: deployed })).toThrow();
+  });
+
   it("falls back to the development secret on a local address", () => {
     expect(resolveAuthSecret({ request: local })).toBe(DEV_SECRET);
     vars.BETTER_AUTH_SECRET = "short-local-secret";

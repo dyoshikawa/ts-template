@@ -14,6 +14,7 @@ import {
   DISABLED_AUTH_PATHS,
   guardAuthRequest,
   SEND_OTP_PATH,
+  SIGN_IN_OTP_PATH,
   VERIFY_PASSKEY_REGISTRATION_PATH,
 } from "./auth-guard";
 import { resolveAuthSecret } from "./auth-secret";
@@ -22,7 +23,7 @@ import { buildOtpEmail, type OtpEmail } from "./otp-email";
 import { passkeyConfig } from "./passkey";
 import { buildPasskeyAddedEmail } from "./passkey-email";
 import { PASSKEY_LABEL, passkeyName } from "./passkey-name";
-import { turnstileConfig } from "./turnstile";
+import { turnstileBinding, turnstileConfig } from "./turnstile";
 
 const OTP_LENGTH = 6;
 const OTP_EXPIRES_IN_SECONDS = 10 * 60;
@@ -30,6 +31,24 @@ const OTP_EXPIRES_IN_SECONDS = 10 * 60;
 // for a long time and slid forward once a day while the user keeps coming back.
 const SESSION_EXPIRES_IN_SECONDS = 90 * 24 * 60 * 60;
 const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
+
+/**
+ * Cookie names for an `https` origin carry the `__Host-` prefix, which the
+ * browser accepts only with `Secure`, `Path=/` and no `Domain`: a sibling host
+ * under the same parent domain cannot plant a session cookie that the app
+ * would read in place of the user's own. Plain `http` (local runs) keeps the
+ * default names, since such cookies must be `Secure`.
+ */
+function cookieAdvanced({ request }: { request: Request }) {
+  if (new URL(request.url).protocol !== "https:") {
+    return {};
+  }
+  return {
+    useSecureCookies: false,
+    cookiePrefix: "__Host-better-auth",
+    defaultCookieAttributes: { secure: true },
+  };
+}
 
 /**
  * Builds a Better Auth instance for one request. Bindings (D1, Email Service)
@@ -47,6 +66,7 @@ export function createAuth({ request }: { request: Request }) {
   const secret = resolveAuthSecret({ request });
   const turnstile = turnstileConfig({ request });
   const passkeys = passkeyConfig({ request });
+  const binding = turnstileBinding({ request });
   return betterAuth({
     baseURL: new URL(request.url).origin,
     secret,
@@ -81,6 +101,7 @@ export function createAuth({ request }: { request: Request }) {
       // The client address Cloudflare stamps on every request; `x-forwarded-for`
       // can be supplied by the client and is not trusted.
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      ...cookieAdvanced({ request }),
     },
     hooks: {
       // Allowlist, sign-in codes only, and no codes at all from a Worker
@@ -112,16 +133,23 @@ export function createAuth({ request }: { request: Request }) {
       }),
     },
     plugins: [
-      // Sending a sign-in code needs a passed Turnstile challenge (the
-      // `x-captcha-response` header), so the mailer cannot be driven by bots.
-      // Local runs and browser tests can switch this off (`TURNSTILE_DISABLED`);
-      // without a key pair the endpoint is refused outright (`guardAuthRequest`).
+      // Sending a sign-in code and entering one each need a passed Turnstile
+      // challenge (the `x-captcha-response` header), so bots can neither
+      // drive the mailer nor spend someone else's code on wrong guesses (a
+      // code takes three). On a deployed Worker the token must be solved on
+      // this app's hostname for signing in (`turnstileBinding`), not on the
+      // account-deletion form. Local runs and browser tests can switch this
+      // off (`TURNSTILE_DISABLED`); without a key pair sending is refused
+      // outright (`guardAuthRequest`).
       ...(turnstile.status === "enabled"
         ? [
             captcha({
               provider: "cloudflare-turnstile",
               secretKey: turnstile.secretKey,
-              endpoints: [SEND_OTP_PATH],
+              endpoints: [SEND_OTP_PATH, SIGN_IN_OTP_PATH],
+              ...(binding
+                ? { expectedAction: "sign-in", allowedHostnames: [binding.hostname] }
+                : {}),
             }),
           ]
         : []),
