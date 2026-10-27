@@ -14,6 +14,10 @@ an installable PWA and Web Push notifications — on the toolchain used by
   Accounts can be closed from the account page, deleting every row of the user. Sessions last 90
   days and slide forward while the user keeps coming back; sign-in requests are rate-limited in D1
   (off for local runs), keyed by the client address Cloudflare reports (`CF-Connecting-IP`).
+- **Passkeys** — after an email sign-in, users can add passkeys and then sign in with a fingerprint,
+  face or screen lock instead of a code (`@better-auth/passkey`). The email code always keeps
+  working. Offered on the custom domain set in `PASSKEY_RP_ID` and on local runs; see
+  [Passkeys](#passkeys).
 - **PWA** — web app manifest, icons (drawn by `scripts/generate-icons.mjs`), and a service worker
   (`public/sw.js`) that caches the hashed assets and serves an offline page.
 - **Install button** — fires the browser's own install dialog where one is offered (Chrome, Edge,
@@ -40,7 +44,7 @@ an installable PWA and Web Push notifications — on the toolchain used by
 | Framework         | [TanStack Start](https://tanstack.com/start) + [React](https://react.dev/)                                     | `vite.config.ts`, `src/router.tsx`, `src/routes/`           |
 | Styling           | [Tailwind CSS v4](https://tailwindcss.com/)                                                                    | `src/styles.css`                                            |
 | Hosting           | [Cloudflare Workers](https://developers.cloudflare.com/workers/) (D1, Email Service, Rate Limiting, Turnstile) | `wrangler.jsonc`, `src/server.ts`                           |
-| Auth              | [Better Auth](https://www.better-auth.com/) (email OTP)                                                        | `src/lib/auth.ts`                                           |
+| Auth              | [Better Auth](https://www.better-auth.com/) (email OTP, passkeys)                                              | `src/lib/auth.ts`                                           |
 | Database          | [Drizzle ORM](https://orm.drizzle.team/) on D1                                                                 | `src/db/schema.ts`, `drizzle/`, `drizzle.config.ts`         |
 | Runtime / tooling | [mise](https://mise.jdx.dev/)                                                                                  | `mise.toml`                                                 |
 | Package manager   | [pnpm](https://pnpm.io/)                                                                                       | `pnpm-workspace.yaml`, `.npmrc`                             |
@@ -82,7 +86,8 @@ Then rename the project:
 
 1. `package.json` — `name`, `description`, `keywords`, `homepage`, `bugs`, `repository`
 2. `src/lib/app.ts` — `APP_NAME`
-3. `wrangler.jsonc` — `name`, `database_name`, and the `vars` (`wrangler.example.jsonc` shows a filled-in one)
+3. `wrangler.jsonc` — `name`, `database_name`, and the `vars` (`wrangler.example.jsonc` shows a filled-in one;
+   `PASSKEY_RP_ID` stays empty until the app has a custom domain)
 4. `public/manifest.webmanifest`, `public/offline.html`, `public/sw.js` — the name, colors and cache names
 5. `scripts/generate-icons.mjs` and `src/components/logo.tsx` — the icon; run `pnpm icons`
 6. `README.md` — this file; `LICENSE` — the copyright holder, if it isn't you
@@ -104,7 +109,10 @@ Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does 
    real pair the deployed app refuses sign-in and account deletion.
 4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in `wrangler.jsonc`, the private
    key in the `VAPID_PRIVATE_KEY` secret, and a contact in `VAPID_SUBJECT`.
-5. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
+5. For passkeys, serve the app from a custom domain (uncomment `routes` in `wrangler.jsonc`) and
+   put that hostname in `PASSKEY_RP_ID` (see [Passkeys](#passkeys)). Left empty, the deployed app
+   signs in by email only.
+6. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
 
    | Secret                 | Purpose                                                                                    |
    | ---------------------- | ------------------------------------------------------------------------------------------ |
@@ -113,12 +121,58 @@ Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does 
    | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.                                |
    | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone.                           |
 
-6. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
+7. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
    add the `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template plus Account → D1 → Edit)
    and `CLOUDFLARE_ACCOUNT_ID` repository secrets and run the Deploy workflow, or switch it to run on
    every push (see the comment at the top of `.github/workflows/deploy.yml`).
 
 To serve the app from your own hostname, uncomment `routes` in `wrangler.jsonc`.
+
+The Worker has a nightly Cron Trigger (`triggers.crons` in `wrangler.jsonc`, `scheduled` in
+`src/server.ts`) that deletes expired sign-in codes and passkey challenges from D1. Add your own
+scheduled work to that handler.
+
+## Passkeys
+
+A signed-in user can add passkeys and then sign in with one instead of a code; the email code keeps
+working for everyone, so a lost device never locks anyone out.
+
+- **Where they work.** A passkey is bound to one domain (the relying party ID). `@better-auth/passkey`
+  (the `passkey` table) is mounted in `src/lib/auth.ts` only on the hosts `passkeyConfig`
+  (`src/lib/passkey.ts`) allows: the hostname in the `PASSKEY_RP_ID` var, and local runs on
+  `http://localhost:4173` (`pnpm dev:cf`, `pnpm e2e`) and `:5173` (`pnpm dev`). The workers.dev
+  address and any other host get no passkey endpoints, and the pages hide every passkey control
+  there (`getPasskeyAvailability`). The accepted origin is pinned to `https://<PASSKEY_RP_ID>` (and
+  the two local origins), never read from the request: the emulator rewrites the URL and `Origin`
+  to the custom domain.
+- **Setting it up in a project made from this template.** Serve the app from its custom domain
+  (`routes` in `wrangler.jsonc`), then set `"PASSKEY_RP_ID": "app.example.com"` in `wrangler.jsonc`
+  `vars`: the bare hostname, no scheme, port or path, exactly the host users open. Deploy, and the
+  sign-in page shows the passkey button there. Changing the domain later orphans every passkey made
+  on the old one (users sign in by email and add a new one), so pick the long-term hostname.
+- **Adding one.** After an email sign-in the home page offers it once per device
+  (`src/components/passkey-offer.tsx`; "Not now" stops the offer on that device, stored in
+  `localStorage`), and the account page lists, adds and deletes them. Adding needs a session at most
+  a day old (Better Auth's `freshAge`); since sessions last 90 days, the account page tells an older
+  session to sign out and sign in by email again first. Adding or deleting also needs the session in
+  the database, not just the 5-minute cookie cache, so a signed-out or revoked session cannot do
+  either.
+- **Labels and the notice email.** The label is always the app's own (`passkeyName`: the password
+  manager known by its AAGUID, plus browser and device from the user agent): a client-supplied name
+  is refused and `/passkey/update-passkey` is switched off. Every new passkey is mailed to the
+  account's address as a notice (`src/lib/passkey-email.ts`), from an `after` hook once the passkey
+  is stored, in the background after the answer.
+- **Signing in.** The sign-in page has a 🔑 button and offers saved passkeys in the email field's
+  autofill (conditional mediation, started again after each attempt until five have failed).
+  `ALLOWED_EMAILS` applies to passkeys too: an account removed from the list cannot sign in with an
+  old passkey. Signing in with a passkey mails nothing, so it has no Turnstile challenge; instead
+  Better Auth's rate limit is tightened for it (`customRules`: 20 challenges and 10 sign-ins a minute
+  per client address), since every challenge is a D1 write. Every visit to the sign-in page hands
+  out a challenge (a `verification` row) that is never used if no passkey is picked; the nightly
+  Cron Trigger deletes expired ones (`src/lib/verification-cleanup.ts`).
+- Browser tests use Chromium's virtual authenticator (`e2e/passkey.spec.ts`). They are skipped when
+  the tests run on another port (`E2E_PORT`), where no passkeys are offered.
+- Closing the account deletes its passkeys with everything else.
 
 ## Sending push notifications
 

@@ -33,9 +33,11 @@ notifications. The UI is written in English.
 - Styling is Tailwind CSS v4. There is no `tailwind.config.js`; theme customization goes in
   `src/styles.css`.
 - Server-side logic belongs in `createServerFn` handlers or route loaders, so it runs in the Worker.
-- Authentication is Better Auth with the `emailOTP` plugin (6-digit code on every sign-in). The
-  instance is built per request in `src/lib/auth.ts`; read the session from the router context
-  (`context.session`) rather than calling Better Auth from components.
+- Authentication is Better Auth with the `emailOTP` plugin (6-digit code by email) plus
+  `@better-auth/passkey` (passkeys added after an email sign-in, on the `PASSKEY_RP_ID` custom
+  domain and localhost only; see `src/lib/passkey.ts`). The instance is built per request in
+  `src/lib/auth.ts`; read the session from the router context (`context.session`) rather than
+  calling Better Auth from components.
 - The database is Cloudflare D1 via Drizzle ORM. Edit `src/db/schema.ts`, then
   `pnpm db:generate --name <change>` and `pnpm db:migrate:local`; never edit `drizzle/` by hand.
 - Push notifications: send with `notifyUser` (`src/lib/push.ts`); the Web Push protocol itself is

@@ -15,6 +15,13 @@
       "when": 1790650335387,
       "tag": "0001_rate-limit",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793018143679,
+      "tag": "0002_passkey",
+      "breakpoints": true
     }
   ]
 }

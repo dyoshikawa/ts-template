@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { InstallButton } from "../components/install-button";
 import { Logo } from "../components/logo";
+import { PasskeyOffer } from "../components/passkey-offer";
 import { secondaryButtonClass } from "../components/ui";
 import { APP_NAME } from "../lib/app";
 
@@ -35,6 +36,7 @@ function Home() {
           with your email address to get started. No password needed.
         </p>
       )}
+      {session ? <PasskeyOffer /> : null}
       <InstallButton className={secondaryButtonClass} />
     </main>
   );

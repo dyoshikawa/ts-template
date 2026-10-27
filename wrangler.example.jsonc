@@ -21,6 +21,11 @@
   // Keep the workers.dev address on as well (wrangler turns it off once
   // routes exist). Set false to serve the app from the custom domain only.
   "workers_dev": true,
+  // Nightly at 03:30 UTC: deletes expired sign-in codes and passkey
+  // challenges (`scheduled` in src/server.ts).
+  "triggers": {
+    "crons": ["30 3 * * *"]
+  },
   "observability": {
     "enabled": true
   },
@@ -33,7 +38,10 @@
     // `VAPID_PUBLIC_KEY` printed by `pnpm vapid`. Changing it later makes
     // every device subscribe again.
     "VAPID_PUBLIC_KEY": "<your-vapid-public-key>",
-    "VAPID_SUBJECT": "mailto:<admin@example.com>"
+    "VAPID_SUBJECT": "mailto:<admin@example.com>",
+    // The hostname passkeys are bound to: the custom domain in `routes`,
+    // without scheme or port. The workers.dev address offers none.
+    "PASSKEY_RP_ID": "<app.example.com>"
   },
   "d1_databases": [
     {

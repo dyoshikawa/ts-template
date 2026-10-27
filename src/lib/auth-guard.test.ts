@@ -1,7 +1,14 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { guardAuthRequest, SEND_OTP_PATH } from "./auth-guard";
+import {
+  assertPasskeyOwnerAllowed,
+  AUTHORITATIVE_SESSION_PATHS,
+  DISABLED_AUTH_PATHS,
+  guardAuthRequest,
+  SEND_OTP_PATH,
+  VERIFY_PASSKEY_REGISTRATION_PATH,
+} from "./auth-guard";
 import type { TurnstileConfig } from "./turnstile";
 
 const vars = env as unknown as Record<string, string | undefined>;
@@ -18,6 +25,11 @@ function statusOf(input: Parameters<typeof guardAuthRequest>[0]): number | null 
   }
 }
 
+/** The status for registering a passkey with this request body. */
+function register(body: unknown): number | null {
+  return statusOf({ path: VERIFY_PASSKEY_REGISTRATION_PATH, body, turnstile: enabled });
+}
+
 /** Stands in for `console.error`, which the unconfigured case logs to. */
 const logged = vi.fn();
 
@@ -32,6 +44,12 @@ afterEach(() => {
 });
 
 describe("guardAuthRequest", () => {
+  it("refuses a client-supplied passkey name", () => {
+    expect(register({ response: {}, name: "Click https://evil.example" })).toBe(400);
+    expect(register({ response: {}, name: "" })).toBe(400);
+    expect(register({ response: {} })).toBeNull();
+  });
+
   it("lets a sign-in code request through", () => {
     expect(
       statusOf({
@@ -93,5 +111,47 @@ describe("guardAuthRequest", () => {
     expect(
       statusOf({ path: "/get-session", body: undefined, turnstile: { status: "unconfigured" } }),
     ).toBeNull();
+  });
+});
+
+describe("DISABLED_AUTH_PATHS", () => {
+  it("switches off renaming passkeys but keeps adding, deleting and signing in", () => {
+    expect(DISABLED_AUTH_PATHS).toContain("/passkey/update-passkey");
+    for (const path of [
+      "/passkey/generate-authenticate-options",
+      "/passkey/verify-authentication",
+      ...AUTHORITATIVE_SESSION_PATHS,
+    ]) {
+      expect(DISABLED_AUTH_PATHS).not.toContain(path);
+    }
+  });
+});
+
+/** The HTTP status the check answers with, or `null` when it lets the sign-in through. */
+async function statusFor(email: string | null): Promise<number | null> {
+  try {
+    await assertPasskeyOwnerAllowed({
+      credentialId: "cred-1",
+      findOwnerEmail: async (id) => (id === "cred-1" ? email : null),
+    });
+    return null;
+  } catch (error) {
+    return (error as { statusCode: number }).statusCode;
+  }
+}
+
+describe("assertPasskeyOwnerAllowed", () => {
+  it("lets every passkey owner in when no list is configured", async () => {
+    expect(await statusFor("anyone@example.com")).toBeNull();
+  });
+
+  it("refuses a passkey whose owner was removed from ALLOWED_EMAILS", async () => {
+    vars.ALLOWED_EMAILS = "owner@example.com";
+    expect(await statusFor("Owner@Example.com")).toBeNull();
+    expect(await statusFor("removed@example.com")).toBe(403);
+  });
+
+  it("refuses a passkey without an account", async () => {
+    expect(await statusFor(null)).toBe(403);
   });
 });
