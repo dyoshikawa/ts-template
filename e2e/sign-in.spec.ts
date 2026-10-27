@@ -19,7 +19,7 @@ test("the account page asks a signed-out visitor to sign in", async ({ page }) =
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
-test("the code step asks no second challenge and offers no resend", async ({ page, email }) => {
+test("the code step offers no resend", async ({ page, email }) => {
   await page.goto("/login");
   await page.getByRole("textbox", { name: "Email address" }).fill(email);
   await page.getByRole("button", { name: "Send code" }).click();
@@ -45,6 +45,29 @@ test("the email OTP endpoints outside the sign-in flow are switched off", async 
     const response = await request.post(path, {
       data: { email: "someone@example.com", otp: "123456", password: "password1234" },
     });
+    expect(response.status(), path).toBe(404);
+  }
+});
+
+test("Better Auth's own endpoints the app does not use are switched off", async ({ request }) => {
+  for (const path of [
+    "/api/auth/sign-in/email",
+    "/api/auth/sign-up/email",
+    "/api/auth/sign-in/social",
+    "/api/auth/request-password-reset",
+    "/api/auth/reset-password",
+    "/api/auth/send-verification-email",
+    "/api/auth/change-email",
+    "/api/auth/change-password",
+    "/api/auth/delete-user",
+  ]) {
+    const response = await request.post(path, {
+      data: { email: "someone@example.com", password: "password1234", provider: "github" },
+    });
+    expect(response.status(), path).toBe(404);
+  }
+  for (const path of ["/api/auth/verify-email?token=x", "/api/auth/delete-user/callback?token=x"]) {
+    const response = await request.get(path, { maxRedirects: 0 });
     expect(response.status(), path).toBe(404);
   }
 });

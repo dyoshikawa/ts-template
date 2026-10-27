@@ -65,6 +65,26 @@ export function turnstileConfig({ request }: { request: Request }): TurnstileCon
   };
 }
 
+/**
+ * What a widget is solved for, sent to Turnstile as its `action` and checked
+ * on the server, so a token solved on one form (deleting the account) cannot
+ * be spent on another (sending or entering a sign-in code).
+ */
+export type TurnstileAction = "sign-in" | "delete-account";
+
+/**
+ * The hostname and action a token must report back, or `null` on local runs:
+ * Cloudflare's test keys (see `TEST_SITE_KEY`) report neither, so a local run
+ * checks only that the token passed. On a deployed Worker the token must have
+ * been solved on the hostname the request is served from.
+ */
+export function turnstileBinding({ request }: { request: Request }): { hostname: string } | null {
+  if (import.meta.env.DEV || isLocalRequest(request)) {
+    return null;
+  }
+  return { hostname: new URL(request.url).hostname };
+}
+
 /** The part of the setup the widget renders from. */
 export function turnstileClientConfig({ request }: { request: Request }): TurnstileClientConfig {
   const config = turnstileConfig({ request });
@@ -81,15 +101,21 @@ export function logTurnstileUnconfigured(): void {
 
 const VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
-/** Whether a widget token is genuine, checked with Cloudflare; a token is single-use. */
+/**
+ * Whether a widget token is genuine and was solved for `action` on this app's
+ * hostname (see `turnstileBinding`), checked with Cloudflare; a token is
+ * single-use.
+ */
 export async function verifyTurnstile({
   request,
   token,
   remoteIp,
+  action,
 }: {
   request: Request;
   token: string;
   remoteIp: string | null;
+  action: TurnstileAction;
 }): Promise<boolean> {
   const config = turnstileConfig({ request });
   if (config.status === "disabled") {
@@ -110,6 +136,14 @@ export async function verifyTurnstile({
   if (!response.ok) {
     return false;
   }
-  const result = (await response.json()) as { success?: boolean };
-  return result.success === true;
+  const result = (await response.json()) as {
+    success?: boolean;
+    hostname?: string;
+    action?: string;
+  };
+  if (result.success !== true) {
+    return false;
+  }
+  const binding = turnstileBinding({ request });
+  return binding === null || (result.hostname === binding.hostname && result.action === action);
 }

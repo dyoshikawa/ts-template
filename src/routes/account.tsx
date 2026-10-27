@@ -90,7 +90,9 @@ function AccountPage() {
             />
             I understand that all my data will be deleted and cannot be restored
           </label>
-          {understood ? <Turnstile config={turnstile} onToken={setToken} /> : null}
+          {understood ? (
+            <Turnstile config={turnstile} action="delete-account" onToken={setToken} />
+          ) : null}
           <button
             type="submit"
             disabled={!understood || !token || pending}

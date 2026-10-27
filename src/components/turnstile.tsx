@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import type { TurnstileClientConfig } from "../lib/turnstile";
+import type { TurnstileAction, TurnstileClientConfig } from "../lib/turnstile";
 
 const SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
@@ -9,6 +9,7 @@ type TurnstileApi = {
     container: HTMLElement,
     options: {
       sitekey: string;
+      action: TurnstileAction;
       callback: (token: string) => void;
       "expired-callback": () => void;
       "error-callback": () => void;
@@ -61,13 +62,16 @@ const DISABLED_TOKEN = "turnstile-disabled";
  * enable and disable the action it guards. While Turnstile is disabled on the
  * server (a local run) nothing is rendered and a placeholder token is handed
  * out at once; on a server without a key pair no token is ever handed out and
- * a notice says the action is unavailable.
+ * a notice says the action is unavailable. `action` names what the token is
+ * for; the server refuses it for anything else.
  */
 export function Turnstile({
   config,
+  action,
   onToken,
 }: {
   config: TurnstileClientConfig;
+  action: TurnstileAction;
   onToken: (token: string | null) => void;
 }) {
   const siteKey = config.status === "enabled" ? config.siteKey : "";
@@ -97,6 +101,7 @@ export function Turnstile({
         }
         widgetId = turnstile.render(container.current, {
           sitekey: siteKey,
+          action,
           callback: (token) => {
             latestOnToken.current(token);
           },
@@ -119,7 +124,7 @@ export function Turnstile({
         window.turnstile?.remove(widgetId);
       }
     };
-  }, [status, siteKey]);
+  }, [status, siteKey, action]);
 
   if (status === "disabled") {
     return null;

@@ -3,23 +3,38 @@ import { APIError } from "better-auth/api";
 import { isEmailAllowed } from "./sign-in-allowlist";
 import { logTurnstileUnconfigured, type TurnstileConfig } from "./turnstile";
 
-/** The endpoint that mails a code; the one Turnstile guards. */
+/** The endpoint that mails a code; Turnstile guards it. */
 export const SEND_OTP_PATH = "/email-otp/send-verification-otp";
-const SIGN_IN_PATHS = new Set([SEND_OTP_PATH, "/sign-in/email-otp"]);
+
+/** The endpoint that signs in with a mailed code; Turnstile guards it too. */
+export const SIGN_IN_OTP_PATH = "/sign-in/email-otp";
+
+const SIGN_IN_PATHS = new Set([SEND_OTP_PATH, SIGN_IN_OTP_PATH]);
 
 /** The endpoint that stores a new passkey (after the browser made it). */
 export const VERIFY_PASSKEY_REGISTRATION_PATH = "/passkey/verify-registration";
 
 /**
- * Endpoints the email OTP plugin mounts outside the sign-in flow, switched
- * off with Better Auth's `disabledPaths` (answered 404). The password-reset
- * ones mail a code to any existing address past Turnstile and
+ * Endpoints switched off with Better Auth's `disabledPaths` (answered 404).
+ *
+ * The email OTP plugin's endpoints outside the sign-in flow: the
+ * password-reset ones mail a code to any existing address past Turnstile and
  * `ALLOWED_EMAILS` (the app has no passwords); `check-verification-otp`
  * spends a sign-in code's attempts past the allowlist; the email-change and
  * verification ones are unused. Renaming a passkey is not offered: its label
  * is always the app's own (see `passkeyName`), so the notice mailed when one
- * is added never carries text someone else typed. Re-enable one only
- * together with the checks it needs.
+ * is added never carries text someone else typed.
+ *
+ * Better Auth's own password, email-verification, email-change, user-deletion
+ * and social-account endpoints, none of which the app uses (account deletion
+ * is `deleteAccount`, which also needs a Turnstile challenge). Most refuse
+ * already because their options are unset, but `/verify-email` does not: it
+ * changes a user's address and signs them in for any token signed with the
+ * auth secret. `/reset-password/:token` and `/callback/:id` cannot be listed
+ * (the list holds exact paths), and do nothing without reset tokens or social
+ * providers.
+ *
+ * Re-enable one only together with the checks it needs.
  */
 export const DISABLED_AUTH_PATHS = [
   "/email-otp/request-password-reset",
@@ -30,6 +45,23 @@ export const DISABLED_AUTH_PATHS = [
   "/email-otp/request-email-change",
   "/email-otp/change-email",
   "/passkey/update-passkey",
+  "/sign-in/email",
+  "/sign-up/email",
+  "/sign-in/social",
+  "/link-social",
+  "/unlink-account",
+  "/get-access-token",
+  "/refresh-token",
+  "/account-info",
+  "/change-password",
+  "/verify-password",
+  "/request-password-reset",
+  "/reset-password",
+  "/verify-email",
+  "/send-verification-email",
+  "/change-email",
+  "/delete-user",
+  "/delete-user/callback",
 ];
 
 /**

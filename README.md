@@ -10,7 +10,8 @@ an installable PWA and Web Push notifications — on the toolchain used by
 - **Email sign-in** — [Better Auth](https://www.better-auth.com/) with the email OTP plugin: enter an
   address, receive a 6-digit code (sent through Cloudflare Email Service), enter it. First-time
   addresses are registered on the spot; `ALLOWED_EMAILS` can restrict who may sign in.
-  [Turnstile](https://developers.cloudflare.com/turnstile/) guards the mailer and account deletion.
+  [Turnstile](https://developers.cloudflare.com/turnstile/) guards sending a code, entering it and
+  account deletion; see [Sign-in security](#sign-in-security).
   Accounts can be closed from the account page, deleting every row of the user. Sessions last 90
   days and slide forward while the user keeps coming back; sign-in requests are rate-limited in D1
   (off for local runs), keyed by the client address Cloudflare reports (`CF-Connecting-IP`).
@@ -131,6 +132,38 @@ To serve the app from your own hostname, uncomment `routes` in `wrangler.jsonc`.
 The Worker has a nightly Cron Trigger (`triggers.crons` in `wrangler.jsonc`, `scheduled` in
 `src/server.ts`) that deletes expired sign-in codes and passkey challenges from D1. Add your own
 scheduled work to that handler.
+
+## Sign-in security
+
+What the auth code enforces, so a change does not quietly drop one of them:
+
+- **The auth secret fails closed.** Outside `vite dev` and local requests, `resolveAuthSecret`
+  (`src/lib/auth-secret.ts`) refuses to run when `BETTER_AUTH_SECRET` is unset, shorter than 32
+  characters, or Better Auth's public default secret — Better Auth itself only refuses that default
+  when `NODE_ENV` is `production`, which a Worker never sets. Every page then answers with an error
+  until the secret is set. Local runs use a fixed development secret.
+- **Turnstile on both sign-in steps.** Better Auth's `captcha` plugin guards
+  `/email-otp/send-verification-otp` and `/sign-in/email-otp` and expects the token in
+  `x-captcha-response`, so nobody can drive the mailer or use up someone else's code (three tries)
+  with wrong guesses. The sign-in page renders a widget on the email step and again on the code
+  step, fresh after every send and every code tried (tokens are single-use). On a deployed Worker a
+  token must have been solved on the request's hostname for the action it is spent on (`sign-in`,
+  or `delete-account` for account deletion; `turnstileBinding` in `src/lib/turnstile.ts`), so a
+  token from one form does not work on the other. `TURNSTILE_DISABLED=1` switches all of this off
+  for local runs and browser tests only.
+- **`__Host-` cookies.** On https, every Better Auth cookie is named `__Host-better-auth.*`
+  (`cookieAdvanced` in `src/lib/auth.ts`): `Secure`, `Path=/` and no `Domain`, so another host under
+  the same parent domain cannot plant a session cookie for the app to read in place of the user's
+  own. Plain http (local runs) keeps the default names. Switching an existing deployment to these
+  names signs every user out once.
+- **Unused endpoints are off.** `DISABLED_AUTH_PATHS` (`src/lib/auth-guard.ts`) answers 404 for the
+  email OTP plugin's password-reset, email-change and verification endpoints and for Better Auth's
+  own password, email-verification, email-change, user-deletion and social-account endpoints. Turn
+  one back on only together with the checks it needs.
+- **Sensitive actions read the session from D1.** The session cookie caches the session for five
+  minutes, which outlives a sign-out or revocation elsewhere. Account deletion reads it with
+  `disableCookieCache`, and adding or deleting a passkey requires it in the database
+  (`AUTHORITATIVE_SESSION_PATHS`).
 
 ## Passkeys
 
