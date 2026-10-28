@@ -172,10 +172,12 @@ A signed-in user can add passkeys and then sign in with one instead of a code; t
 working for everyone, so a lost device never locks anyone out.
 
 - **Where they work.** A passkey is bound to one domain (the relying party ID). `@better-auth/passkey`
-  (the `passkey` table) is mounted in `src/lib/auth.ts` only on the hosts `passkeyConfig`
-  (`src/lib/passkey.ts`) allows: the hostname in the `PASSKEY_RP_ID` var, and local runs on
-  `http://localhost:4173` (`pnpm dev:cf`, `pnpm e2e`) and `:5173` (`pnpm dev`). The workers.dev
-  address and any other host get no passkey endpoints, and the pages hide every passkey control
+  (the `passkey` table) is mounted only on the hosts `passkeyConfig` (`src/lib/passkey.ts`)
+  allows, and only by the auth endpoints (`src/lib/auth-passkey.ts`, imported on demand by
+  `src/routes/api/auth/$.ts`, so its WebAuthn libraries stay off every other request's cold
+  start): the hostname in the `PASSKEY_RP_ID` var, and local runs on `http://localhost:4173`
+  (`pnpm dev:cf`, `pnpm e2e`) and `:5173` (`pnpm dev`). The workers.dev address and any other
+  host get no passkey endpoints, and the pages hide every passkey control
   there (`getPasskeyAvailability`). The accepted origin is pinned to `https://<PASSKEY_RP_ID>` (and
   the two local origins), never read from the request: the emulator rewrites the URL and `Origin`
   to the custom domain.
