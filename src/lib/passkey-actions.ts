@@ -11,7 +11,7 @@ export async function addPasskey(): Promise<
 > {
   // Fetched on demand (see `loadAuthClient`); a failed fetch reads like a
   // failed request, the way the client reports one.
-  const authClient = await loadAuthClient().catch(() => null);
+  const authClient = await loadAuthClient();
   const { error } = authClient ? await authClient.passkey.addPasskey() : { error: { status: 0 } };
   if (!error) {
     return { status: "ok" };

@@ -1,12 +1,12 @@
 import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { NotificationSettings } from "../components/notification-settings";
 import { Turnstile } from "../components/turnstile";
 import { dangerButtonClass, secondaryButtonClass } from "../components/ui";
 import { deleteAccount, getTurnstileConfig, listPasskeys } from "../lib/account-functions";
 import { APP_NAME } from "../lib/app";
-import { loadAuthClient } from "../lib/load-auth-client";
+import { loadAuthClient, preloadAuthClient } from "../lib/load-auth-client";
 import { addPasskey } from "../lib/passkey-actions";
 import { PASSKEY_NEEDS_FRESH_SIGN_IN, usePasskeysSupported } from "../lib/passkey-browser";
 import { passkeyLabel } from "../lib/passkey-name";
@@ -141,6 +141,13 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const supported = usePasskeysSupported();
 
+  // Fetched ahead of the press: see `preloadAuthClient`.
+  useEffect(() => {
+    if (canAdd && supported) {
+      preloadAuthClient();
+    }
+  }, [canAdd, supported]);
+
   const add = async () => {
     setPending(true);
     setStatus(null);
@@ -161,7 +168,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
     }
     setPending(true);
     setStatus(null);
-    const authClient = await loadAuthClient().catch(() => null);
+    const authClient = await loadAuthClient();
     const { error } = authClient
       ? await authClient.passkey.deletePasskey({ id: passkey.id })
       : { error: true };

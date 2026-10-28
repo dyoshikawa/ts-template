@@ -208,7 +208,8 @@ working for everyone, so a lost device never locks anyone out.
   out a challenge (a `verification` row) that is never used if no passkey is picked; the nightly
   Cron Trigger deletes expired ones (`src/lib/verification-cleanup.ts`).
 - Browser tests use Chromium's virtual authenticator (`e2e/passkey.spec.ts`). They are skipped when
-  the tests run on another port (`E2E_PORT`), where no passkeys are offered.
+  the tests run on another port (`E2E_PORT`), where no passkeys are offered. `E2E_INSPECTOR_PORT`
+  moves wrangler's inspector off 9229 when another emulator holds it.
 - Closing the account deletes its passkeys with everything else.
 
 ## Sending push notifications

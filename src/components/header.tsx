@@ -21,11 +21,18 @@ export function Header({ session }: { session: SessionData }) {
 
   const signOut = async () => {
     close();
+    // Fetched first, so a failed fetch does not leave notifications switched
+    // off while the session goes on; without the client, sign out through
+    // the endpoint it would call.
+    const authClient = await loadAuthClient();
     // Before the session ends: the server forgets this device, so the next
     // person signed in here does not get this user's notifications.
     await disableNotifications().catch(() => {});
-    const authClient = await loadAuthClient();
-    await authClient.signOut();
+    if (authClient) {
+      await authClient.signOut();
+    } else {
+      await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => {});
+    }
     await router.invalidate();
   };
 

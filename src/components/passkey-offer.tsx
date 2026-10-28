@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
+import { preloadAuthClient } from "../lib/load-auth-client";
 import { addPasskey } from "../lib/passkey-actions";
 import {
   declinePasskeyOffer,
@@ -28,6 +29,13 @@ export function PasskeyOffer() {
 
   // Shown on one visit of the home page only.
   useEffect(() => showPasskeyOffer(), []);
+
+  // Fetched ahead of the press: see `preloadAuthClient`.
+  useEffect(() => {
+    if (offered) {
+      preloadAuthClient();
+    }
+  }, [offered]);
 
   if (state.name === "closed" || (!offered && state.name !== "done")) {
     return null;

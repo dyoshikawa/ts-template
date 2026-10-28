@@ -1,5 +1,5 @@
 import { getAuthenticatorName, passkey } from "@better-auth/passkey";
-import { type BetterAuthPlugin } from "better-auth";
+import type { BetterAuthPlugin } from "better-auth";
 
 import { APP_NAME } from "./app";
 import { assertPasskeyOwnerAllowed } from "./auth-guard";

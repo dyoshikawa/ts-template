@@ -1,5 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { type BetterAuthPlugin } from "better-auth";
+import type { BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "better-auth/api";
 // The minimal build leaves out Kysely and its schema migrator: the Drizzle
 // adapter talks to D1 itself and Drizzle Kit writes the migrations, so
