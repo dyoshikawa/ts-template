@@ -20,7 +20,8 @@ an installable PWA and Web Push notifications — on the toolchain used by
   working. Offered on the custom domain set in `PASSKEY_RP_ID` and on local runs; see
   [Passkeys](#passkeys).
 - **PWA** — web app manifest, icons (drawn by `scripts/generate-icons.mjs`), and a service worker
-  (`public/sw.js`) that caches the hashed assets and serves an offline page.
+  (`public/sw.js`) that caches the hashed assets and serves an offline page. `public/_headers`
+  marks the hashed assets immutable, so the browser does not revalidate them on every page either.
 - **Install button** — fires the browser's own install dialog where one is offered (Chrome, Edge,
   Samsung Internet), and shows the "Add to Home Screen" steps on iOS and on phones whose browser
   offers none. Hidden once the app runs installed.
