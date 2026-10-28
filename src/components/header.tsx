@@ -2,8 +2,8 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { APP_NAME } from "../lib/app";
-import { authClient } from "../lib/auth-client";
 import { type SessionData } from "../lib/auth-functions";
+import { loadAuthClient } from "../lib/load-auth-client";
 import { disableNotifications } from "../lib/push-client";
 import { Drawer } from "./drawer";
 import { InstallButton } from "./install-button";
@@ -21,10 +21,18 @@ export function Header({ session }: { session: SessionData }) {
 
   const signOut = async () => {
     close();
+    // Fetched first, so a failed fetch does not leave notifications switched
+    // off while the session goes on; without the client, sign out through
+    // the endpoint it would call.
+    const authClient = await loadAuthClient();
     // Before the session ends: the server forgets this device, so the next
     // person signed in here does not get this user's notifications.
     await disableNotifications().catch(() => {});
-    await authClient.signOut();
+    if (authClient) {
+      await authClient.signOut();
+    } else {
+      await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => {});
+    }
     await router.invalidate();
   };
 

@@ -1,7 +1,11 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { getAuthenticatorName, passkey } from "@better-auth/passkey";
-import { betterAuth } from "better-auth";
+import type { BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "better-auth/api";
+// The minimal build leaves out Kysely and its schema migrator: the Drizzle
+// adapter talks to D1 itself and Drizzle Kit writes the migrations, so
+// neither is ever used, and the Worker no longer evaluates them on a cold
+// start.
+import { betterAuth } from "better-auth/minimal";
 import { captcha, emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { env, waitUntil } from "cloudflare:workers";
@@ -9,7 +13,6 @@ import { env, waitUntil } from "cloudflare:workers";
 import { createDb } from "../db/client";
 import { APP_NAME } from "./app";
 import {
-  assertPasskeyOwnerAllowed,
   AUTHORITATIVE_SESSION_PATHS,
   CAPTCHA_PATHS,
   DISABLED_AUTH_PATHS,
@@ -20,9 +23,8 @@ import { resolveAuthSecret } from "./auth-secret";
 import { isLocalRequest } from "./local-request";
 import { OTP_LENGTH } from "./otp-code";
 import { buildOtpEmail, type OtpEmail } from "./otp-email";
-import { passkeyConfig } from "./passkey";
 import { buildPasskeyAddedEmail } from "./passkey-email";
-import { PASSKEY_LABEL, passkeyName } from "./passkey-name";
+import { PASSKEY_LABEL } from "./passkey-name";
 import { turnstileBinding, turnstileConfig } from "./turnstile";
 
 const OTP_EXPIRES_IN_SECONDS = 10 * 60;
@@ -59,12 +61,23 @@ function cookieAdvanced({ request }: { request: Request }) {
  * registered on the spot — unless `ALLOWED_EMAILS` restricts who may sign in.
  * A signed-in user can then add passkeys and sign in with one instead (on
  * the hosts `passkeyConfig` allows); the email code always keeps working.
+ *
+ * The passkey plugin (`passkeys`, from `passkeyPlugins` in ./auth-passkey.ts)
+ * is passed only by the auth endpoints (`/api/auth/*`), which serve the
+ * passkey routes. Reading the session needs none of it, and leaving it out
+ * keeps its WebAuthn and X.509 libraries (about a third of the auth code) off
+ * the Worker's cold start for every page and server function.
  */
-export function createAuth({ request }: { request: Request }) {
+export function createAuth({
+  request,
+  passkeys = [],
+}: {
+  request: Request;
+  passkeys?: BetterAuthPlugin[];
+}) {
   // Throws on a deployed Worker without a usable secret (see `resolveAuthSecret`).
   const secret = resolveAuthSecret({ request });
   const turnstile = turnstileConfig({ request });
-  const passkeys = passkeyConfig({ request });
   const binding = turnstileBinding({ request });
   return betterAuth({
     baseURL: new URL(request.url).origin,
@@ -166,46 +179,7 @@ export function createAuth({ request }: { request: Request }) {
           await sendOtp({ email, otp });
         },
       }),
-      // Passkeys are added by a signed-in user only (Better Auth's default,
-      // with a session at most a day old), never at sign-up. No Turnstile:
-      // signing in with one mails nothing.
-      ...(passkeys.status === "enabled"
-        ? [
-            passkey({
-              rpID: passkeys.rpID,
-              rpName: APP_NAME,
-              origin: passkeys.origin,
-              registration: {
-                afterVerification: ({ ctx, verification }) => ({
-                  name: passkeyName({
-                    provider: getAuthenticatorName(verification.registrationInfo?.aaguid),
-                    userAgent: ctx.request?.headers.get("user-agent") ?? null,
-                  }),
-                }),
-              },
-              authentication: {
-                // Before the session is made: an account no longer in
-                // `ALLOWED_EMAILS` does not sign in with an old passkey.
-                afterVerification: async ({ ctx, clientData }) => {
-                  await assertPasskeyOwnerAllowed({
-                    credentialId: clientData.id,
-                    findOwnerEmail: async (credentialID) => {
-                      const stored = await ctx.context.adapter.findOne<{ userId: string }>({
-                        model: "passkey",
-                        where: [{ field: "credentialID", value: credentialID }],
-                      });
-                      if (!stored) {
-                        return null;
-                      }
-                      const owner = await ctx.context.internalAdapter.findUserById(stored.userId);
-                      return owner?.email ?? null;
-                    },
-                  });
-                },
-              },
-            }),
-          ]
-        : []),
+      ...passkeys,
       tanstackStartCookies(),
     ],
   });

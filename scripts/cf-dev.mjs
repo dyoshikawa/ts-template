@@ -4,7 +4,8 @@
 // day-to-day work; this catches what only shows up in the built bundle.
 //
 //   node scripts/cf-dev.mjs [--vars .dev.vars] [--state .wrangler/state]
-//                           [--port 4173] [--fresh] [--no-build]
+//                           [--port 4173] [--inspector-port 9229]
+//                           [--fresh] [--no-build]
 //
 // The variables file is copied next to the built Worker config, where
 // wrangler picks it up as `.dev.vars` (a path passed as `--env-file` would be
@@ -23,6 +24,7 @@ const { values } = parseArgs({
     vars: { type: "string", default: ".dev.vars" },
     state: { type: "string", default: join(".wrangler", "state") },
     port: { type: "string", default: "4173" },
+    "inspector-port": { type: "string" },
     fresh: { type: "boolean", default: false },
     build: { type: "boolean", default: true },
   },
@@ -77,4 +79,5 @@ run("pnpm", [
   stateDir,
   "--port",
   values.port,
+  ...(values["inspector-port"] ? ["--inspector-port", values["inspector-port"]] : []),
 ]);

@@ -1,12 +1,12 @@
 import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { NotificationSettings } from "../components/notification-settings";
 import { Turnstile } from "../components/turnstile";
 import { dangerButtonClass, secondaryButtonClass } from "../components/ui";
 import { deleteAccount, getTurnstileConfig, listPasskeys } from "../lib/account-functions";
 import { APP_NAME } from "../lib/app";
-import { authClient } from "../lib/auth-client";
+import { loadAuthClient, preloadAuthClient } from "../lib/load-auth-client";
 import { addPasskey } from "../lib/passkey-actions";
 import { PASSKEY_NEEDS_FRESH_SIGN_IN, usePasskeysSupported } from "../lib/passkey-browser";
 import { passkeyLabel } from "../lib/passkey-name";
@@ -113,11 +113,21 @@ function AccountPage() {
 
 type PasskeyRow = NonNullable<Awaited<ReturnType<typeof listPasskeys>>>["passkeys"][number];
 
-const passkeyDateFormat = new Intl.DateTimeFormat("en-US", {
-  // Fixed, so the server render and the browser agree.
-  timeZone: "UTC",
-  dateStyle: "medium",
-});
+let passkeyDateFormat: Intl.DateTimeFormat | undefined;
+
+/**
+ * The format of a passkey's date, made on first use: building an
+ * `Intl.DateTimeFormat` loads the locale data, which a page without
+ * passkeys (and the module's load in the Worker) need not pay for.
+ */
+function formatPasskeyDate(date: Date): string {
+  passkeyDateFormat ??= new Intl.DateTimeFormat("en-US", {
+    // Fixed, so the server render and the browser agree.
+    timeZone: "UTC",
+    dateStyle: "medium",
+  });
+  return passkeyDateFormat.format(date);
+}
 
 /**
  * The user's passkeys: add one on this device, or delete one. Shown on the
@@ -130,6 +140,13 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const supported = usePasskeysSupported();
+
+  // Fetched ahead of the press: see `preloadAuthClient`.
+  useEffect(() => {
+    if (canAdd && supported) {
+      preloadAuthClient();
+    }
+  }, [canAdd, supported]);
 
   const add = async () => {
     setPending(true);
@@ -151,7 +168,10 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
     }
     setPending(true);
     setStatus(null);
-    const { error } = await authClient.passkey.deletePasskey({ id: passkey.id });
+    const authClient = await loadAuthClient();
+    const { error } = authClient
+      ? await authClient.passkey.deletePasskey({ id: passkey.id })
+      : { error: true };
     if (error) {
       setStatus({ ok: false, text: "Could not delete the passkey. Please try again." });
     } else {
@@ -176,7 +196,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
                 <span className="truncate text-sm">{passkeyLabel(passkey)}</span>
                 {passkey.createdAt ? (
                   <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Added {passkeyDateFormat.format(passkey.createdAt)}
+                    Added {formatPasskeyDate(passkey.createdAt)}
                   </span>
                 ) : null}
               </div>

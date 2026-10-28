@@ -20,7 +20,8 @@ an installable PWA and Web Push notifications — on the toolchain used by
   working. Offered on the custom domain set in `PASSKEY_RP_ID` and on local runs; see
   [Passkeys](#passkeys).
 - **PWA** — web app manifest, icons (drawn by `scripts/generate-icons.mjs`), and a service worker
-  (`public/sw.js`) that caches the hashed assets and serves an offline page.
+  (`public/sw.js`) that caches the hashed assets and serves an offline page. `public/_headers`
+  marks the hashed assets immutable, so the browser does not revalidate them on every page either.
 - **Install button** — fires the browser's own install dialog where one is offered (Chrome, Edge,
   Samsung Internet), and shows the "Add to Home Screen" steps on iOS and on phones whose browser
   offers none. Hidden once the app runs installed.
@@ -172,10 +173,12 @@ A signed-in user can add passkeys and then sign in with one instead of a code; t
 working for everyone, so a lost device never locks anyone out.
 
 - **Where they work.** A passkey is bound to one domain (the relying party ID). `@better-auth/passkey`
-  (the `passkey` table) is mounted in `src/lib/auth.ts` only on the hosts `passkeyConfig`
-  (`src/lib/passkey.ts`) allows: the hostname in the `PASSKEY_RP_ID` var, and local runs on
-  `http://localhost:4173` (`pnpm dev:cf`, `pnpm e2e`) and `:5173` (`pnpm dev`). The workers.dev
-  address and any other host get no passkey endpoints, and the pages hide every passkey control
+  (the `passkey` table) is mounted only on the hosts `passkeyConfig` (`src/lib/passkey.ts`)
+  allows, and only by the auth endpoints (`src/lib/auth-passkey.ts`, imported on demand by
+  `src/routes/api/auth/$.ts`, so its WebAuthn libraries stay off every other request's cold
+  start): the hostname in the `PASSKEY_RP_ID` var, and local runs on `http://localhost:4173`
+  (`pnpm dev:cf`, `pnpm e2e`) and `:5173` (`pnpm dev`). The workers.dev address and any other
+  host get no passkey endpoints, and the pages hide every passkey control
   there (`getPasskeyAvailability`). The accepted origin is pinned to `https://<PASSKEY_RP_ID>` (and
   the two local origins), never read from the request: the emulator rewrites the URL and `Origin`
   to the custom domain.
@@ -205,7 +208,8 @@ working for everyone, so a lost device never locks anyone out.
   out a challenge (a `verification` row) that is never used if no passkey is picked; the nightly
   Cron Trigger deletes expired ones (`src/lib/verification-cleanup.ts`).
 - Browser tests use Chromium's virtual authenticator (`e2e/passkey.spec.ts`). They are skipped when
-  the tests run on another port (`E2E_PORT`), where no passkeys are offered.
+  the tests run on another port (`E2E_PORT`), where no passkeys are offered. `E2E_INSPECTOR_PORT`
+  moves wrangler's inspector off 9229 when another emulator holds it.
 - Closing the account deletes its passkeys with everything else.
 
 ## Sending push notifications

@@ -1,4 +1,4 @@
-import { authClient } from "./auth-client";
+import { loadAuthClient } from "./load-auth-client";
 import { passkeyRegistrationErrorMessage } from "./passkey-browser";
 
 /**
@@ -9,7 +9,10 @@ import { passkeyRegistrationErrorMessage } from "./passkey-browser";
 export async function addPasskey(): Promise<
   { status: "ok" } | { status: "cancelled" } | { status: "failed"; message: string }
 > {
-  const { error } = await authClient.passkey.addPasskey();
+  // Fetched on demand (see `loadAuthClient`); a failed fetch reads like a
+  // failed request, the way the client reports one.
+  const authClient = await loadAuthClient();
+  const { error } = authClient ? await authClient.passkey.addPasskey() : { error: { status: 0 } };
   if (!error) {
     return { status: "ok" };
   }

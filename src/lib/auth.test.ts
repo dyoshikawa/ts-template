@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAuth } from "./auth";
+import { passkeyPlugins } from "./auth-passkey";
 
 /** The stand-in `env` as a bag of variables. */
 const vars = env as unknown as Record<string, string | undefined>;
@@ -46,10 +47,17 @@ describe("createAuth", () => {
       expect(cookie.attributes).toMatchObject({ secure: true, path: "/" });
       expect(cookie.attributes).not.toHaveProperty("domain");
     }
-    // The passkey plugin's challenge cookie is named the same way.
-    expect(https.createAuthCookie("better-auth-passkey").name).toBe(
+    // The passkey plugin's challenge cookie (on the endpoints' instance,
+    // the one with the plugin) is named the same way.
+    vars.PASSKEY_RP_ID = "app.example.com";
+    const endpoints = await createAuth({
+      request: deployed,
+      passkeys: passkeyPlugins({ request: deployed }),
+    }).$context;
+    expect(endpoints.createAuthCookie("better-auth-passkey").name).toBe(
       "__Host-better-auth.better-auth-passkey",
     );
+    expect(endpoints.options.plugins?.map((plugin) => plugin.id)).toContain("passkey");
 
     const http = await createAuth({ request: local }).$context;
     expect(http.authCookies.sessionToken.name).toBe("better-auth.session_token");
