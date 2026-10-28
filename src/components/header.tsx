@@ -2,8 +2,8 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { APP_NAME } from "../lib/app";
-import { authClient } from "../lib/auth-client";
 import { type SessionData } from "../lib/auth-functions";
+import { loadAuthClient } from "../lib/load-auth-client";
 import { disableNotifications } from "../lib/push-client";
 import { Drawer } from "./drawer";
 import { InstallButton } from "./install-button";
@@ -24,6 +24,7 @@ export function Header({ session }: { session: SessionData }) {
     // Before the session ends: the server forgets this device, so the next
     // person signed in here does not get this user's notifications.
     await disableNotifications().catch(() => {});
+    const authClient = await loadAuthClient();
     await authClient.signOut();
     await router.invalidate();
   };

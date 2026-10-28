@@ -6,7 +6,7 @@ import { Turnstile } from "../components/turnstile";
 import { dangerButtonClass, secondaryButtonClass } from "../components/ui";
 import { deleteAccount, getTurnstileConfig, listPasskeys } from "../lib/account-functions";
 import { APP_NAME } from "../lib/app";
-import { authClient } from "../lib/auth-client";
+import { loadAuthClient } from "../lib/load-auth-client";
 import { addPasskey } from "../lib/passkey-actions";
 import { PASSKEY_NEEDS_FRESH_SIGN_IN, usePasskeysSupported } from "../lib/passkey-browser";
 import { passkeyLabel } from "../lib/passkey-name";
@@ -151,7 +151,10 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
     }
     setPending(true);
     setStatus(null);
-    const { error } = await authClient.passkey.deletePasskey({ id: passkey.id });
+    const authClient = await loadAuthClient().catch(() => null);
+    const { error } = authClient
+      ? await authClient.passkey.deletePasskey({ id: passkey.id })
+      : { error: true };
     if (error) {
       setStatus({ ok: false, text: "Could not delete the passkey. Please try again." });
     } else {
