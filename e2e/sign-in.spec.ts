@@ -26,6 +26,11 @@ test("the code step offers no resend", async ({ page, email }) => {
   await expect(page.getByRole("textbox", { name: "Sign-in code" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Resend code" })).toHaveCount(0);
 
+  // The code is typed without its hyphen and shown with it.
+  const code = page.getByRole("textbox", { name: "Sign-in code" });
+  await code.pressSequentially("12345678");
+  await expect(code).toHaveValue("1234-5678");
+
   // A new code is had by going back to the email step.
   await page.getByRole("button", { name: "Back to the email step" }).click();
   await expect(page.getByRole("textbox", { name: "Email address" })).toBeVisible();
@@ -43,7 +48,7 @@ test("the email OTP endpoints outside the sign-in flow are switched off", async 
     "/api/auth/email-otp/change-email",
   ]) {
     const response = await request.post(path, {
-      data: { email: "someone@example.com", otp: "123456", password: "password1234" },
+      data: { email: "someone@example.com", otp: "12345678", password: "password1234" },
     });
     expect(response.status(), path).toBe(404);
   }

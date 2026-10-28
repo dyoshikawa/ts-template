@@ -1,3 +1,5 @@
+import { formatOtp } from "./otp-code";
+
 /** A mail the app sends: subject plus plain-text and HTML bodies. */
 export type OtpEmail = {
   subject: string;
@@ -14,18 +16,19 @@ export function buildOtpEmail({
   otp: string;
   expiresInMinutes: number;
 }): OtpEmail {
-  const subject = `${otp} is your ${appName} sign-in code`;
+  const code = formatOtp(otp);
+  const subject = `${code} is your ${appName} sign-in code`;
   const text = [
     `Your ${appName} sign-in code is:`,
     "",
-    otp,
+    code,
     "",
     `The code expires in ${expiresInMinutes} minutes.`,
     "If you did not ask for it, you can ignore this email.",
   ].join("\n");
   const html = [
     `<p>Your ${escapeHtml(appName)} sign-in code is:</p>`,
-    `<p style="font-size:24px;font-weight:bold;letter-spacing:0.2em">${escapeHtml(otp)}</p>`,
+    `<p style="font-size:24px;font-weight:bold;letter-spacing:0.2em">${escapeHtml(code)}</p>`,
     `<p>The code expires in ${expiresInMinutes} minutes.</p>`,
     "<p>If you did not ask for it, you can ignore this email.</p>",
   ].join("\n");

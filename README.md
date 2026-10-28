@@ -8,10 +8,10 @@ an installable PWA and Web Push notifications — on the toolchain used by
 ## Features
 
 - **Email sign-in** — [Better Auth](https://www.better-auth.com/) with the email OTP plugin: enter an
-  address, receive a 6-digit code (sent through Cloudflare Email Service), enter it. First-time
+  address, receive an 8-digit code (sent through Cloudflare Email Service), enter it. First-time
   addresses are registered on the spot; `ALLOWED_EMAILS` can restrict who may sign in.
-  [Turnstile](https://developers.cloudflare.com/turnstile/) guards sending a code, entering it and
-  account deletion; see [Sign-in security](#sign-in-security).
+  [Turnstile](https://developers.cloudflare.com/turnstile/) guards sending a code and account
+  deletion; see [Sign-in security](#sign-in-security).
   Accounts can be closed from the account page, deleting every row of the user. Sessions last 90
   days and slide forward while the user keeps coming back; sign-in requests are rate-limited in D1
   (off for local runs), keyed by the client address Cloudflare reports (`CF-Connecting-IP`).
@@ -81,7 +81,7 @@ Cloudflare's always-passing test keys. The service worker — and so install and
 only runs in the built app: `pnpm dev:cf` builds it and serves it in the Cloudflare emulator (workerd)
 at `http://localhost:4173` with a local D1. Copy `.dev.vars.example` to `.dev.vars` for local
 variables; `pnpm dev:cf --vars .dev.vars.e2e` switches Turnstile off and fixes the sign-in code to
-`123456`.
+`12345678`.
 
 Then rename the project:
 
@@ -142,11 +142,12 @@ What the auth code enforces, so a change does not quietly drop one of them:
   characters, or Better Auth's public default secret — Better Auth itself only refuses that default
   when `NODE_ENV` is `production`, which a Worker never sets. Every page then answers with an error
   until the secret is set. Local runs use a fixed development secret.
-- **Turnstile on both sign-in steps.** Better Auth's `captcha` plugin guards
-  `/email-otp/send-verification-otp` and `/sign-in/email-otp` and expects the token in
-  `x-captcha-response`, so nobody can drive the mailer or use up someone else's code (three tries)
-  with wrong guesses. The sign-in page renders a widget on the email step and again on the code
-  step, fresh after every send and every code tried (tokens are single-use). On a deployed Worker a
+- **Turnstile on sending a code.** Better Auth's `captcha` plugin guards
+  `/email-otp/send-verification-otp` and expects the token in `x-captcha-response`, so bots cannot
+  drive the mailer. Entering a code needs no challenge: the email OTP plugin spends a code after
+  three wrong guesses, and Better Auth rate-limits `/sign-in/*` (`CAPTCHA_PATHS` in
+  `src/lib/auth-guard.ts`). The sign-in page renders a widget on the email step only, fresh after
+  every send (tokens are single-use). On a deployed Worker a
   token must have been solved on the request's hostname for the action it is spent on (`sign-in`,
   or `delete-account` for account deletion; `turnstileBinding` in `src/lib/turnstile.ts`), so a
   token from one form does not work on the other. `TURNSTILE_DISABLED=1` switches all of this off
