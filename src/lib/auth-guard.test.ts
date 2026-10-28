@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertPasskeyOwnerAllowed,
   AUTHORITATIVE_SESSION_PATHS,
+  CAPTCHA_PATHS,
   DISABLED_AUTH_PATHS,
   guardAuthRequest,
   SEND_OTP_PATH,
@@ -112,6 +113,13 @@ describe("guardAuthRequest", () => {
     expect(
       statusOf({ path: "/get-session", body: undefined, turnstile: { status: "unconfigured" } }),
     ).toBeNull();
+  });
+});
+
+describe("CAPTCHA_PATHS", () => {
+  it("asks for Turnstile when sending a code, not when entering it", () => {
+    expect(CAPTCHA_PATHS).toEqual([SEND_OTP_PATH]);
+    expect(CAPTCHA_PATHS).not.toContain(SIGN_IN_OTP_PATH);
   });
 });
 

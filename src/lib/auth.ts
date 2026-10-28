@@ -11,10 +11,9 @@ import { APP_NAME } from "./app";
 import {
   assertPasskeyOwnerAllowed,
   AUTHORITATIVE_SESSION_PATHS,
+  CAPTCHA_PATHS,
   DISABLED_AUTH_PATHS,
   guardAuthRequest,
-  SEND_OTP_PATH,
-  SIGN_IN_OTP_PATH,
   VERIFY_PASSKEY_REGISTRATION_PATH,
 } from "./auth-guard";
 import { resolveAuthSecret } from "./auth-secret";
@@ -133,10 +132,9 @@ export function createAuth({ request }: { request: Request }) {
       }),
     },
     plugins: [
-      // Sending a sign-in code and entering one each need a passed Turnstile
-      // challenge (the `x-captcha-response` header), so bots can neither
-      // drive the mailer nor spend someone else's code on wrong guesses (a
-      // code takes three). On a deployed Worker the token must be solved on
+      // Sending a sign-in code needs a passed Turnstile challenge (the
+      // `x-captcha-response` header), so bots cannot drive the mailer.
+      // Entering one needs none (see `CAPTCHA_PATHS`). On a deployed Worker the token must be solved on
       // this app's hostname for signing in (`turnstileBinding`), not on the
       // account-deletion form. Local runs and browser tests can switch this
       // off (`TURNSTILE_DISABLED`); without a key pair sending is refused
@@ -146,7 +144,7 @@ export function createAuth({ request }: { request: Request }) {
             captcha({
               provider: "cloudflare-turnstile",
               secretKey: turnstile.secretKey,
-              endpoints: [SEND_OTP_PATH, SIGN_IN_OTP_PATH],
+              endpoints: [...CAPTCHA_PATHS],
               ...(binding
                 ? { expectedAction: "sign-in", allowedHostnames: [binding.hostname] }
                 : {}),

@@ -47,9 +47,9 @@ function LoginPage() {
   const [pending, setPending] = useState(false);
   const supported = usePasskeysSupported();
   const passkeys = passkeysOffered && supported;
-  // Sending a code and entering it each need a passed Turnstile challenge. A
-  // token is single-use, so the widget is remounted (fresh token) after every
-  // send and every code tried.
+  // Sending a code needs a passed Turnstile challenge; entering it does not.
+  // A token is single-use, so the widget is remounted (fresh token) after
+  // every send.
   const [captcha, setCaptcha] = useState<string | null>(null);
   const [captchaRound, setCaptchaRound] = useState(0);
 
@@ -79,18 +79,9 @@ function LoginPage() {
   );
 
   const verifyCode = async ({ email, otp }: { email: string; otp: string }) => {
-    if (!captcha) {
-      setError("Wait a moment for the check to finish.");
-      return;
-    }
     setPending(true);
     setError(null);
-    const { error: verifyError } = await authClient.signIn.emailOtp(
-      { email, otp },
-      { headers: { "x-captcha-response": captcha } },
-    );
-    setCaptcha(null);
-    setCaptchaRound((round) => round + 1);
+    const { error: verifyError } = await authClient.signIn.emailOtp({ email, otp });
     setPending(false);
     if (verifyError) {
       setError(verifyError.message ?? "That code is not right. Please try again.");
@@ -208,8 +199,6 @@ function LoginPage() {
         <OtpForm
           email={step.email}
           pending={pending}
-          ready={captcha !== null}
-          challenge={challenge}
           onSubmit={verifyCode}
           onChangeEmail={() => {
             setError(null);
@@ -279,23 +268,17 @@ function EmailForm({
 }
 
 /**
- * The code step. Each code tried needs a fresh Turnstile challenge, so wrong
- * guesses by someone else cannot use up the user's code. A new code is had by
- * going back to the email step (there is no resend).
+ * The code step. It asks for no Turnstile challenge (sending the code already
+ * did). A new code is had by going back to the email step (there is no resend).
  */
 function OtpForm({
   email,
   pending,
-  ready,
-  challenge,
   onSubmit,
   onChangeEmail,
 }: {
   email: string;
   pending: boolean;
-  /** True once the Turnstile challenge has passed. */
-  ready: boolean;
-  challenge: ReactNode;
   onSubmit: (params: { email: string; otp: string }) => void;
   /** Back to the email step, to send a code again or to another address. */
   onChangeEmail: () => void;
@@ -332,10 +315,9 @@ function OtpForm({
           className={`${inputClass} text-center text-2xl tracking-[0.5em]`}
         />
       </label>
-      {challenge}
       <button
         type="submit"
-        disabled={pending || !ready || otp.length !== OTP_LENGTH}
+        disabled={pending || otp.length !== OTP_LENGTH}
         className={primaryButtonClass}
       >
         {pending ? "Checking…" : "Sign in"}

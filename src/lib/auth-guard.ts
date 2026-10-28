@@ -3,13 +3,22 @@ import { APIError } from "better-auth/api";
 import { isEmailAllowed } from "./sign-in-allowlist";
 import { logTurnstileUnconfigured, type TurnstileConfig } from "./turnstile";
 
-/** The endpoint that mails a code; Turnstile guards it. */
+/** The endpoint that mails a code; the one Turnstile guards. */
 export const SEND_OTP_PATH = "/email-otp/send-verification-otp";
 
-/** The endpoint that signs in with a mailed code; Turnstile guards it too. */
+/** The endpoint that signs in with a mailed code; no Turnstile (see `CAPTCHA_PATHS`). */
 export const SIGN_IN_OTP_PATH = "/sign-in/email-otp";
 
 const SIGN_IN_PATHS = new Set([SEND_OTP_PATH, SIGN_IN_OTP_PATH]);
+
+/**
+ * Endpoints that take a Turnstile token (the captcha plugin's `endpoints`):
+ * sending a code only, since the mailer is what needs protecting. Entering a
+ * code needs none: the email OTP plugin spends a code after three wrong
+ * guesses (its default `allowedAttempts`), and Better Auth rate-limits
+ * `/sign-in/*` (three requests per 10 s per IP address).
+ */
+export const CAPTCHA_PATHS: readonly string[] = [SEND_OTP_PATH];
 
 /** The endpoint that stores a new passkey (after the browser made it). */
 export const VERIFY_PASSKEY_REGISTRATION_PATH = "/passkey/verify-registration";
