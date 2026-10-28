@@ -113,11 +113,21 @@ function AccountPage() {
 
 type PasskeyRow = NonNullable<Awaited<ReturnType<typeof listPasskeys>>>["passkeys"][number];
 
-const passkeyDateFormat = new Intl.DateTimeFormat("en-US", {
-  // Fixed, so the server render and the browser agree.
-  timeZone: "UTC",
-  dateStyle: "medium",
-});
+let passkeyDateFormat: Intl.DateTimeFormat | undefined;
+
+/**
+ * The format of a passkey's date, made on first use: building an
+ * `Intl.DateTimeFormat` loads the locale data, which a page without
+ * passkeys (and the module's load in the Worker) need not pay for.
+ */
+function formatPasskeyDate(date: Date): string {
+  passkeyDateFormat ??= new Intl.DateTimeFormat("en-US", {
+    // Fixed, so the server render and the browser agree.
+    timeZone: "UTC",
+    dateStyle: "medium",
+  });
+  return passkeyDateFormat.format(date);
+}
 
 /**
  * The user's passkeys: add one on this device, or delete one. Shown on the
@@ -179,7 +189,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
                 <span className="truncate text-sm">{passkeyLabel(passkey)}</span>
                 {passkey.createdAt ? (
                   <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Added {passkeyDateFormat.format(passkey.createdAt)}
+                    Added {formatPasskeyDate(passkey.createdAt)}
                   </span>
                 ) : null}
               </div>
