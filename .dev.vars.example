@@ -16,7 +16,7 @@
 #TURNSTILE_DISABLED=1
 
 # A fixed sign-in code instead of a random one. Local runs only.
-#E2E_SIGN_IN_CODE=123456
+#E2E_SIGN_IN_CODE=12345678
 
 # Comma-separated addresses allowed to sign in; unset lets anybody in.
 #ALLOWED_EMAILS=

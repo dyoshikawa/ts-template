@@ -8,7 +8,7 @@ an installable PWA and Web Push notifications — on the toolchain used by
 ## Features
 
 - **Email sign-in** — [Better Auth](https://www.better-auth.com/) with the email OTP plugin: enter an
-  address, receive a 6-digit code (sent through Cloudflare Email Service), enter it. First-time
+  address, receive an 8-digit code (sent through Cloudflare Email Service), enter it. First-time
   addresses are registered on the spot; `ALLOWED_EMAILS` can restrict who may sign in.
   [Turnstile](https://developers.cloudflare.com/turnstile/) guards sending a code, entering it and
   account deletion; see [Sign-in security](#sign-in-security).
@@ -81,7 +81,7 @@ Cloudflare's always-passing test keys. The service worker — and so install and
 only runs in the built app: `pnpm dev:cf` builds it and serves it in the Cloudflare emulator (workerd)
 at `http://localhost:4173` with a local D1. Copy `.dev.vars.example` to `.dev.vars` for local
 variables; `pnpm dev:cf --vars .dev.vars.e2e` switches Turnstile off and fixes the sign-in code to
-`123456`.
+`12345678`.
 
 Then rename the project:
 

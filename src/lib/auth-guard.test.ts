@@ -86,7 +86,7 @@ describe("guardAuthRequest", () => {
 
   it("keeps addresses outside the allowlist out of both sign-in steps", () => {
     vars.ALLOWED_EMAILS = "owner@example.com";
-    const body = { email: "ann@example.com", type: "sign-in", otp: "123456" };
+    const body = { email: "ann@example.com", type: "sign-in", otp: "12345678" };
     expect(statusOf({ path: SEND_OTP_PATH, body, turnstile: enabled })).toBe(403);
     expect(statusOf({ path: "/sign-in/email-otp", body, turnstile: enabled })).toBe(403);
     expect(

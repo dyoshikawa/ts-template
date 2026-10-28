@@ -10,6 +10,7 @@ import {
 } from "../components/ui";
 import { getPasskeyAvailability, getTurnstileConfig } from "../lib/account-functions";
 import { authClient } from "../lib/auth-client";
+import { formatOtp, normalizeOtp, OTP_LENGTH } from "../lib/otp-code";
 import {
   passkeySignInErrorMessage,
   requestPasskeyOffer,
@@ -250,7 +251,7 @@ function EmailForm({
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <p className="text-sm text-neutral-600 dark:text-neutral-400">
-        Enter your email address and we will send you a 6-digit sign-in code.
+        Enter your email address and we will send you an 8-digit sign-in code.
       </p>
       <label className="flex flex-col gap-1 text-sm">
         Email address
@@ -309,7 +310,7 @@ function OtpForm({
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <p className="text-sm text-neutral-600 dark:text-neutral-400">
-        We sent a 6-digit code to <span className="font-medium">{email}</span>. Enter it below to
+        We sent an 8-digit code to <span className="font-medium">{email}</span>. Enter it below to
         sign in.
       </p>
       <label className="flex flex-col gap-1 text-sm">
@@ -318,13 +319,15 @@ function OtpForm({
           type="text"
           name="otp"
           inputMode="numeric"
-          pattern="[0-9]{6}"
-          maxLength={6}
+          // Shown as 1234-5678; the hyphen is put in for the user and left
+          // out of the code sent, so typing or pasting either form works.
+          pattern="[0-9]{4}-[0-9]{4}"
+          maxLength={OTP_LENGTH + 1}
           autoComplete="one-time-code"
           required
-          value={otp}
+          value={formatOtp(otp)}
           onChange={(event) => {
-            setOtp(event.target.value.replaceAll(/\D/g, ""));
+            setOtp(normalizeOtp(event.target.value));
           }}
           className={`${inputClass} text-center text-2xl tracking-[0.5em]`}
         />
@@ -332,7 +335,7 @@ function OtpForm({
       {challenge}
       <button
         type="submit"
-        disabled={pending || !ready || otp.length !== 6}
+        disabled={pending || !ready || otp.length !== OTP_LENGTH}
         className={primaryButtonClass}
       >
         {pending ? "Checking…" : "Sign in"}

@@ -19,13 +19,13 @@ import {
 } from "./auth-guard";
 import { resolveAuthSecret } from "./auth-secret";
 import { isLocalRequest } from "./local-request";
+import { OTP_LENGTH } from "./otp-code";
 import { buildOtpEmail, type OtpEmail } from "./otp-email";
 import { passkeyConfig } from "./passkey";
 import { buildPasskeyAddedEmail } from "./passkey-email";
 import { PASSKEY_LABEL, passkeyName } from "./passkey-name";
 import { turnstileBinding, turnstileConfig } from "./turnstile";
 
-const OTP_LENGTH = 6;
 const OTP_EXPIRES_IN_SECONDS = 10 * 60;
 // Signing in means fetching a code from the mailbox, so a session is kept
 // for a long time and slid forward once a day while the user keeps coming back.
@@ -55,8 +55,8 @@ function cookieAdvanced({ request }: { request: Request }) {
  * are only reachable through `env`, and the base URL is taken from the request
  * so the same code serves `vite dev` and every deployed hostname.
  *
- * Sign-in is passwordless: the user enters an email address, receives a
- * 6-digit one-time code, and enters that code. First-time addresses are
+ * Sign-in is passwordless: the user enters an email address, receives an
+ * 8-digit one-time code, and enters that code. First-time addresses are
  * registered on the spot — unless `ALLOWED_EMAILS` restricts who may sign in.
  * A signed-in user can then add passkeys and sign in with one instead (on
  * the hosts `passkeyConfig` allows); the email code always keeps working.

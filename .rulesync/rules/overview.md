@@ -33,7 +33,7 @@ notifications. The UI is written in English.
 - Styling is Tailwind CSS v4. There is no `tailwind.config.js`; theme customization goes in
   `src/styles.css`.
 - Server-side logic belongs in `createServerFn` handlers or route loaders, so it runs in the Worker.
-- Authentication is Better Auth with the `emailOTP` plugin (6-digit code by email) plus
+- Authentication is Better Auth with the `emailOTP` plugin (8-digit code by email) plus
   `@better-auth/passkey` (passkeys added after an email sign-in, on the `PASSKEY_RP_ID` custom
   domain and localhost only; see `src/lib/passkey.ts`). The instance is built per request in
   `src/lib/auth.ts`; read the session from the router context (`context.session`) rather than
