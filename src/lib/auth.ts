@@ -1,6 +1,11 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { betterAuth, type BetterAuthPlugin } from "better-auth";
+import { type BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "better-auth/api";
+// The minimal build leaves out Kysely and its schema migrator: the Drizzle
+// adapter talks to D1 itself and Drizzle Kit writes the migrations, so
+// neither is ever used, and the Worker no longer evaluates them on a cold
+// start.
+import { betterAuth } from "better-auth/minimal";
 import { captcha, emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { env, waitUntil } from "cloudflare:workers";

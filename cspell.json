@@ -67,6 +67,7 @@
     "jsdom",
     "KHTML",
     "knip",
+    "kysely",
     "lintstagedrc",
     "misconfig",
     "modelcontextprotocol",
