@@ -10,7 +10,7 @@ import {
   usePasskeyOfferPending,
 } from "../lib/passkey-browser";
 import { BusyLabel } from "./spinner";
-import { primaryButtonClass, secondaryButtonClass } from "./ui";
+import { BUTTON_EMOJI, primaryButtonClass, secondaryButtonClass } from "./ui";
 
 type OfferState =
   | { name: "open"; error: string | null }
@@ -100,7 +100,9 @@ export function PasskeyOffer() {
                 void register();
               }}
             >
-              <BusyLabel busy={state.name === "pending"}>Add a passkey</BusyLabel>
+              <BusyLabel busy={state.name === "pending"} emoji={BUTTON_EMOJI.passkey}>
+                Add a passkey
+              </BusyLabel>
             </button>
             <button
               type="button"

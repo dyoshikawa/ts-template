@@ -37,6 +37,8 @@ function Home() {
         </p>
       )}
       {session ? <PasskeyOffer /> : null}
+      {/* Also in the menu, on purpose: here a first visit sees it, the menu
+          keeps it reachable from every other screen. */}
       <InstallButton className={secondaryButtonClass} />
     </main>
   );

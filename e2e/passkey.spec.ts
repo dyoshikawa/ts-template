@@ -92,7 +92,7 @@ test("a passkey offered after the email sign-in signs in later and can be delete
 
   await signOut(page);
   await page.goto("/login");
-  await page.getByRole("button", { name: "🔑 Sign in with a passkey" }).click();
+  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
   await page.waitForURL("/");
   await expect(page.getByRole("link", { name: email })).toBeVisible();
   // Signing in with a passkey offers no second one.
@@ -119,7 +119,7 @@ test("a passkey offered after the email sign-in signs in later and can be delete
   // would do before asking.
   await expect.poll(challenges).toBeGreaterThan(beforeVisit);
   const before = challenges();
-  await page.getByRole("button", { name: "🔑 Sign in with a passkey" }).click();
+  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
   const alert = page.getByRole("alert");
   await expect(alert).toContainText("Sign in with your email address instead");
   await expect.poll(challenges).toBeGreaterThanOrEqual(before + 2);
@@ -151,7 +151,7 @@ test('"Not now" stops the offer on this device', async ({ page, email }) => {
 
   // The account page still adds one.
   await page.goto("/account");
-  await page.getByRole("button", { name: "🔑 Add a passkey on this device" }).click();
+  await page.getByRole("button", { name: "Add a passkey on this device" }).click();
   await expect(page.getByText("Passkey added.")).toBeVisible();
   await expect(page.getByText(LABEL)).toBeVisible();
 });

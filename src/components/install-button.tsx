@@ -2,6 +2,8 @@ import { useState, useSyncExternalStore } from "react";
 
 import { type InstallAction, installActionNow, installStore, promptInstall } from "../lib/install";
 import { Sheet } from "./sheet";
+import { BusyLabel } from "./spinner";
+import { BUTTON_EMOJI } from "./ui";
 
 type InstallWay = "ios" | "browser";
 
@@ -36,7 +38,9 @@ export function InstallButton({ className }: { className: string }) {
           }
         }}
       >
-        📲 {action === "guide-ios" ? "Add to Home Screen" : "Install app"}
+        <BusyLabel emoji={BUTTON_EMOJI.install}>
+          {action === "guide-ios" ? "Add to Home Screen" : "Install app"}
+        </BusyLabel>
       </button>
       {guide === null ? null : (
         <InstallGuide

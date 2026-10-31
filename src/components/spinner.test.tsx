@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { BusyLabel } from "./spinner";
+import { BUTTON_EMOJI } from "./ui";
 
 afterEach(() => {
   cleanup();
@@ -31,5 +32,12 @@ describe("BusyLabel", () => {
     const button = screen.getByRole("button", { name: "Turn on" });
     expect(button.querySelector("[data-spinner]")).not.toBeNull();
     expect(button.textContent).not.toContain("🔔");
+  });
+});
+
+describe("BUTTON_EMOJI", () => {
+  it("gives every action its own emoji", () => {
+    const values = Object.values(BUTTON_EMOJI);
+    expect(new Set(values).size).toBe(values.length);
   });
 });

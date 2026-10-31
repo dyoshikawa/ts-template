@@ -8,7 +8,8 @@ import { disableNotifications } from "../lib/push-client";
 import { Drawer } from "./drawer";
 import { InstallButton } from "./install-button";
 import { Logo } from "./logo";
-import { BusyLabel } from "./spinner";
+import { BusyLabel, Emoji } from "./spinner";
+import { BUTTON_EMOJI } from "./ui";
 
 const menuLinkClass =
   "flex min-h-12 items-center gap-3 px-4 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800";
@@ -60,6 +61,9 @@ export function Header({ session }: { session: SessionData }) {
           <Logo size={32} />
         </Link>
       </div>
+      {/* Also in the menu, on purpose: the bar shows who is signed in (or that
+          nobody is) on every screen and is the one-tap way there; the menu
+          lists every destination so it reads complete. */}
       {session ? (
         <Link
           to="/account"
@@ -80,10 +84,12 @@ export function Header({ session }: { session: SessionData }) {
               {session.user.email}
             </p>
             <Link to="/" onClick={close} className={menuLinkClass}>
-              🏠 Home
+              <Emoji>{BUTTON_EMOJI.home}</Emoji>
+              Home
             </Link>
             <Link to="/account" onClick={close} className={menuLinkClass}>
-              👤 Account
+              <Emoji>{BUTTON_EMOJI.account}</Emoji>
+              Account
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
             <div className="mt-auto border-t border-neutral-200 dark:border-neutral-800">
@@ -93,17 +99,21 @@ export function Header({ session }: { session: SessionData }) {
                 onClick={signOut}
                 className={`${menuLinkClass} w-full disabled:opacity-50`}
               >
-                <BusyLabel busy={signingOut}>Sign out</BusyLabel>
+                <BusyLabel busy={signingOut} emoji={BUTTON_EMOJI.signOut}>
+                  Sign out
+                </BusyLabel>
               </button>
             </div>
           </>
         ) : (
           <>
             <Link to="/" onClick={close} className={menuLinkClass}>
-              🏠 Home
+              <Emoji>{BUTTON_EMOJI.home}</Emoji>
+              Home
             </Link>
             <Link to="/login" onClick={close} className={menuLinkClass}>
-              🔑 Sign in
+              <Emoji>{BUTTON_EMOJI.signIn}</Emoji>
+              Sign in
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
           </>

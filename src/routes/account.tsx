@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { NotificationSettings } from "../components/notification-settings";
 import { BusyLabel } from "../components/spinner";
 import { Turnstile } from "../components/turnstile";
-import { dangerButtonClass, secondaryButtonClass } from "../components/ui";
+import { BUTTON_EMOJI, dangerButtonClass, secondaryButtonClass } from "../components/ui";
 import { deleteAccount, getTurnstileConfig, listPasskeys } from "../lib/account-functions";
 import { APP_NAME } from "../lib/app";
 import { loadAuthClient, preloadAuthClient } from "../lib/load-auth-client";
@@ -99,7 +99,9 @@ function AccountPage() {
             disabled={!understood || !token || pending}
             className={dangerButtonClass}
           >
-            <BusyLabel busy={pending}>Close account and delete all data</BusyLabel>
+            <BusyLabel busy={pending} emoji={BUTTON_EMOJI.delete}>
+              Close account and delete all data
+            </BusyLabel>
           </button>
         </form>
         {error ? (
@@ -215,7 +217,10 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
                   void remove(passkey);
                 }}
               >
-                <BusyLabel busy={busy?.action === "delete" && busy.id === passkey.id}>
+                <BusyLabel
+                  busy={busy?.action === "delete" && busy.id === passkey.id}
+                  emoji={BUTTON_EMOJI.delete}
+                >
                   Delete
                 </BusyLabel>
               </button>
@@ -238,7 +243,9 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
             void add();
           }}
         >
-          <BusyLabel busy={busy?.action === "add"}>🔑 Add a passkey on this device</BusyLabel>
+          <BusyLabel busy={busy?.action === "add"} emoji={BUTTON_EMOJI.passkey}>
+            Add a passkey on this device
+          </BusyLabel>
         </button>
       ) : (
         <p className="text-sm text-neutral-600 dark:text-neutral-400">

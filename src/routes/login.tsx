@@ -8,6 +8,7 @@ import {
   linkButtonClass,
   primaryButtonClass,
   secondaryButtonClass,
+  BUTTON_EMOJI,
 } from "../components/ui";
 import { getPasskeyAvailability, getTurnstileConfig } from "../lib/account-functions";
 import { authClient } from "../lib/auth-client";
@@ -192,7 +193,9 @@ function LoginPage() {
                 }}
                 className={secondaryButtonClass}
               >
-                <BusyLabel busy={busy === "passkey"}>🔑 Sign in with a passkey</BusyLabel>
+                <BusyLabel busy={busy === "passkey"} emoji={BUTTON_EMOJI.passkey}>
+                  Sign in with a passkey
+                </BusyLabel>
               </button>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 Add a passkey from your account page after signing in with your email address.
@@ -267,7 +270,9 @@ function EmailForm({
       </label>
       {challenge}
       <button type="submit" disabled={pending || !ready} className={primaryButtonClass}>
-        <BusyLabel busy={sending}>Send code</BusyLabel>
+        <BusyLabel busy={sending} emoji={BUTTON_EMOJI.sendCode}>
+          Send code
+        </BusyLabel>
       </button>
       <p className="text-xs text-neutral-500 dark:text-neutral-400">
         New here? Signing in creates your account.
@@ -332,7 +337,9 @@ function OtpForm({
         disabled={pending || otp.length !== OTP_LENGTH}
         className={primaryButtonClass}
       >
-        <BusyLabel busy={checking}>Sign in</BusyLabel>
+        <BusyLabel busy={checking} emoji={BUTTON_EMOJI.signIn}>
+          Sign in
+        </BusyLabel>
       </button>
       <p className="text-xs text-neutral-500 dark:text-neutral-400">
         No code, or the wrong address? Go back to the email step to send a new one.

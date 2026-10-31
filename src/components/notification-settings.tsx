@@ -9,7 +9,7 @@ import {
 } from "../lib/push-client";
 import { sendTestNotification } from "../lib/push-functions";
 import { BusyLabel } from "./spinner";
-import { primaryButtonClass, secondaryButtonClass } from "./ui";
+import { BUTTON_EMOJI, primaryButtonClass, secondaryButtonClass } from "./ui";
 
 /** The buttons that wait on the server or the browser's push service. */
 type Action = "on" | "off" | "test";
@@ -167,7 +167,9 @@ function NotificationBody({
             onClick={onTurnOn}
             className={primaryButtonClass}
           >
-            <BusyLabel busy={busy === "on"}>Turn on notifications</BusyLabel>
+            <BusyLabel busy={busy === "on"} emoji={BUTTON_EMOJI.notificationsOn}>
+              Turn on notifications
+            </BusyLabel>
           </button>
         </>
       );
@@ -182,7 +184,9 @@ function NotificationBody({
             onClick={onSendTest}
             className={secondaryButtonClass}
           >
-            <BusyLabel busy={busy === "test"}>Send a test notification</BusyLabel>
+            <BusyLabel busy={busy === "test"} emoji={BUTTON_EMOJI.testNotification}>
+              Send a test notification
+            </BusyLabel>
           </button>
           <button
             type="button"
@@ -190,7 +194,9 @@ function NotificationBody({
             onClick={onTurnOff}
             className={secondaryButtonClass}
           >
-            <BusyLabel busy={busy === "off"}>Turn off notifications</BusyLabel>
+            <BusyLabel busy={busy === "off"} emoji={BUTTON_EMOJI.notificationsOff}>
+              Turn off notifications
+            </BusyLabel>
           </button>
         </>
       );
