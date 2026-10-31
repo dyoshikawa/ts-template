@@ -31,6 +31,10 @@ export default defineConfig({
     ...devices["iPhone 13"],
     // The mobile emulation switches to WebKit; keep Chromium.
     defaultBrowserType: "chromium",
+    // The tests read the Japanese text, the app's default language (the
+    // browser asks for it through Accept-Language); e2e/i18n.spec.ts opens
+    // the screens in English.
+    locale: "ja-JP",
     // The service worker would otherwise serve stale assets across builds.
     serviceWorkers: "block",
     trace: "retain-on-failure",

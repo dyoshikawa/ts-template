@@ -58,6 +58,8 @@
     "eamodio",
     "Edgi",
     "esbuild",
+    "gesturechange",
+    "gesturestart",
     "GITSTATUS",
     "HISTFILE",
     "hostnames",

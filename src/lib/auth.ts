@@ -11,6 +11,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { env, waitUntil } from "cloudflare:workers";
 
 import { createDb } from "../db/client";
+import { type Language, requestLanguage } from "../i18n/language";
 import { APP_NAME } from "./app";
 import {
   AUTHORITATIVE_SESSION_PATHS,
@@ -84,6 +85,12 @@ export function createAuth({
     secret,
     disabledPaths: DISABLED_AUTH_PATHS,
     database: drizzleAdapter(createDb({ d1: env.DB }), { provider: "sqlite" }),
+    user: {
+      additionalFields: {
+        // Written by `setLanguagePreference` only.
+        language: { type: "string", required: false, input: false },
+      },
+    },
     session: {
       expiresIn: SESSION_EXPIRES_IN_SECONDS,
       updateAge: SESSION_UPDATE_AGE_SECONDS,
@@ -138,9 +145,13 @@ export function createAuth({
           return;
         }
         const stored = storedPasskeyName(ctx.context.returned);
-        const email = ctx.context.session?.user.email;
-        if (stored !== undefined && email) {
-          waitUntil(notifyPasskeyAdded({ email, passkeyName: stored, request }));
+        const user = ctx.context.session?.user;
+        if (stored !== undefined && user?.email) {
+          // In the account's language: its saved choice, else this page's.
+          const language = requestLanguage({ request, saved: user.language });
+          waitUntil(
+            notifyPasskeyAdded({ email: user.email, passkeyName: stored, request, language }),
+          );
         }
       }),
     },
@@ -176,7 +187,8 @@ export function createAuth({
           if (type !== "sign-in") {
             return;
           }
-          await sendOtp({ email, otp });
+          // In the language of the page that asked for it.
+          await sendOtp({ email, otp, language: requestLanguage({ request }) });
         },
       }),
       ...passkeys,
@@ -185,11 +197,20 @@ export function createAuth({
   });
 }
 
-async function sendOtp({ email, otp }: { email: string; otp: string }): Promise<void> {
+async function sendOtp({
+  email,
+  otp,
+  language,
+}: {
+  email: string;
+  otp: string;
+  language: Language;
+}): Promise<void> {
   const message = buildOtpEmail({
     appName: APP_NAME,
     otp,
     expiresInMinutes: OTP_EXPIRES_IN_SECONDS / 60,
+    language,
   });
 
   if (import.meta.env.DEV) {
@@ -224,15 +245,18 @@ async function notifyPasskeyAdded({
   email,
   passkeyName: name,
   request,
+  language,
 }: {
   email: string;
   passkeyName: string;
   request: Request;
+  language: Language;
 }): Promise<void> {
   const message = buildPasskeyAddedEmail({
     appName: APP_NAME,
     passkeyName: name,
     accountUrl: new URL("/account", request.url).toString(),
+    language,
   });
   if (import.meta.env.DEV) {
     // oxlint-disable-next-line no-console

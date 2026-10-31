@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 
+import { type Messages } from "../i18n/messages";
 import { APP_NAME } from "./app";
 
 /**
@@ -137,45 +138,45 @@ export function declinePasskeyOffer(): void {
  */
 const CANCELLED_CODES = new Set(["ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY", "ERROR_CEREMONY_ABORTED"]);
 
-/**
- * Shown when a passkey cannot be added because the session is older than
- * Better Auth's `freshAge` (a day). Sessions last 90 days, so this is the
- * usual case for a returning user.
- */
-export const PASSKEY_NEEDS_FRESH_SIGN_IN =
-  "For your security, passkeys can only be added within a day of signing in with an email code. Sign out, sign in again with your email address, then add the passkey.";
-
 /** What to tell the user when adding a passkey failed; `null` when they cancelled. */
-export function passkeyRegistrationErrorMessage(error: {
-  status: number;
-  code?: string | undefined;
+export function passkeyRegistrationErrorMessage({
+  error,
+  t,
+}: {
+  error: { status: number; code?: string | undefined };
+  t: Messages;
 }): string | null {
   if (error.code !== undefined && CANCELLED_CODES.has(error.code)) {
     return null;
   }
   switch (error.code) {
+    // The session is older than Better Auth's `freshAge` (a day). Sessions
+    // last 90 days, so this is the usual case for a returning user.
     case "SESSION_NOT_FRESH":
-      return PASSKEY_NEEDS_FRESH_SIGN_IN;
+      return t.passkeys.needsFreshSignIn;
     case "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED":
-      return "This passkey is already registered.";
+      return t.passkeys.errors.alreadyRegistered;
     default:
-      return "Could not add the passkey. Please try again.";
+      return t.passkeys.errors.addFailed;
   }
 }
 
 /** What to tell the user when signing in with a passkey failed; `null` when they cancelled. */
-export function passkeySignInErrorMessage(error: {
-  status: number;
-  code?: string | undefined;
+export function passkeySignInErrorMessage({
+  error,
+  t,
+}: {
+  error: { status: number; code?: string | undefined };
+  t: Messages;
 }): string | null {
   if (error.code !== undefined && CANCELLED_CODES.has(error.code)) {
     return null;
   }
   if (error.code === "PASSKEY_NOT_FOUND") {
-    return "This passkey is not registered (it may have been deleted). Sign in with your email address instead.";
+    return t.passkeys.errors.notFound;
   }
   if (error.status === 403) {
-    return "This account cannot sign in.";
+    return t.passkeys.errors.forbidden;
   }
-  return "Could not sign in with the passkey. You can sign in with your email address instead.";
+  return t.passkeys.errors.signInFailed;
 }

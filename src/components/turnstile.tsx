@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 
+import { useI18n } from "../i18n/i18n-context";
+import { type Language } from "../i18n/language";
 import type { TurnstileAction, TurnstileClientConfig } from "../lib/turnstile";
 
 const SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
@@ -15,6 +17,7 @@ type TurnstileApi = {
       "error-callback": () => void;
       theme: "auto";
       size: "flexible";
+      language: Language;
     },
   ) => string;
   remove: (widgetId: string) => void;
@@ -74,6 +77,7 @@ export function Turnstile({
   action: TurnstileAction;
   onToken: (token: string | null) => void;
 }) {
+  const { t, language } = useI18n();
   const siteKey = config.status === "enabled" ? config.siteKey : "";
   const { status } = config;
   const container = useRef<HTMLDivElement>(null);
@@ -113,6 +117,8 @@ export function Turnstile({
           },
           theme: "auto",
           size: "flexible",
+          // The widget's own text, in the page's language.
+          language,
         });
       })
       .catch(() => {
@@ -124,7 +130,7 @@ export function Turnstile({
         window.turnstile?.remove(widgetId);
       }
     };
-  }, [status, siteKey, action]);
+  }, [status, siteKey, action, language]);
 
   if (status === "disabled") {
     return null;
@@ -132,7 +138,7 @@ export function Turnstile({
   if (status === "unconfigured") {
     return (
       <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-        This action is unavailable: the verification check is not set up on this server.
+        {t.turnstile.unavailable}
       </p>
     );
   }

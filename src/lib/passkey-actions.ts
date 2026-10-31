@@ -1,14 +1,17 @@
+import { type Messages } from "../i18n/messages";
 import { loadAuthClient } from "./load-auth-client";
 import { passkeyRegistrationErrorMessage } from "./passkey-browser";
 
 /**
  * Asks the browser for a new passkey and stores it on the signed-in account.
  * Resolves to `ok` once stored, `cancelled` when the user closed the dialog,
- * or the message to show.
+ * or the message to show (in the language of `t`).
  */
-export async function addPasskey(): Promise<
-  { status: "ok" } | { status: "cancelled" } | { status: "failed"; message: string }
-> {
+export async function addPasskey({
+  t,
+}: {
+  t: Messages;
+}): Promise<{ status: "ok" } | { status: "cancelled" } | { status: "failed"; message: string }> {
   // Fetched on demand (see `loadAuthClient`); a failed fetch reads like a
   // failed request, the way the client reports one.
   const authClient = await loadAuthClient();
@@ -16,6 +19,6 @@ export async function addPasskey(): Promise<
   if (!error) {
     return { status: "ok" };
   }
-  const message = passkeyRegistrationErrorMessage(error);
+  const message = passkeyRegistrationErrorMessage({ error, t });
   return message === null ? { status: "cancelled" } : { status: "failed", message };
 }

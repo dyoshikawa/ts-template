@@ -49,13 +49,11 @@ test("turns notifications on and off from the account page", async ({ page, emai
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
 
-  const notifications = page.getByRole("region", { name: "Notifications" });
-  await notifications.getByRole("button", { name: "Turn on notifications" }).click();
-  await expect(notifications.getByText("Notifications are on for this device.")).toBeVisible();
-  await expect(
-    notifications.getByRole("button", { name: "Send a test notification" }),
-  ).toBeVisible();
+  const notifications = page.getByRole("region", { name: "通知" });
+  await notifications.getByRole("button", { name: "通知をオンにする" }).click();
+  await expect(notifications.getByText("この端末の通知はオンです。")).toBeVisible();
+  await expect(notifications.getByRole("button", { name: "テスト通知を送る" })).toBeVisible();
 
-  await notifications.getByRole("button", { name: "Turn off notifications" }).click();
-  await expect(notifications.getByRole("button", { name: "Turn on notifications" })).toBeVisible();
+  await notifications.getByRole("button", { name: "通知をオフにする" }).click();
+  await expect(notifications.getByRole("button", { name: "通知をオンにする" })).toBeVisible();
 });

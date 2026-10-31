@@ -36,8 +36,18 @@ an installable PWA and Web Push notifications — on the toolchain used by
   every script it renders, and `'strict-dynamic'` lets those load the rest. Loading anything from
   another origin (an image CDN, an analytics script) means adding it to `contentSecurityPolicy`;
   the browser tests fail on any CSP violation. `vite dev` runs without the policy.
-- **No zoom on iOS** — form controls are at least 16 px, which keeps iOS Safari from zooming in when
-  one is tapped; `e2e/input-zoom.spec.ts` checks every screen.
+- **Japanese and English** — every piece of the app's text (labels, errors, page titles, the emails)
+  comes from one catalogue per language (`src/i18n/ja.ts`, and `src/i18n/en.ts` typed against it,
+  so a missing key fails the typecheck). The language is resolved on the server, so the first render
+  is already in it: the user's saved choice (on the user row), then the `lang` cookie, then the
+  browser's `Accept-Language` (any `ja*` is Japanese, anything else English). A switcher
+  (🌐 日本語 / English) sits on the account page and in the menu and switches at once.
+- **Phone UI rules** — popups fill a phone's screen (`Sheet`, `Drawer`; tablets get a centred dialog),
+  no pinch zoom (viewport meta, `touch-action: pan-x pan-y` and iOS gesture events cancelled),
+  form controls at least 16 px so iOS Safari never zooms into one, a spinner inside every button
+  that waits on the server (never a full-screen block), one emoji per action (`BUTTON_EMOJI`), and
+  pull down to reload in the installed app (`PullToReload`). `e2e/ui-rules.spec.ts` and
+  `e2e/input-zoom.spec.ts` check them.
 
 ## What's included
 

@@ -32,9 +32,9 @@ test("no text field is small enough for iOS to zoom into", async ({ page, email 
   await page.goto("/login");
   await expectNoZoom(page);
 
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
-  await page.getByRole("button", { name: "Send code" }).click();
-  await expect(page.getByRole("textbox", { name: "Sign-in code" })).toBeVisible();
+  await page.getByRole("textbox", { name: "メールアドレス" }).fill(email);
+  await page.getByRole("button", { name: "コードを送信" }).click();
+  await expect(page.getByRole("textbox", { name: "サインインコード" })).toBeVisible();
   await expectNoZoom(page);
 });
 

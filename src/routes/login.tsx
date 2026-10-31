@@ -1,13 +1,17 @@
 import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
 
+import { BusyLabel } from "../components/spinner";
 import { Turnstile } from "../components/turnstile";
 import {
   inputClass,
   linkButtonClass,
   primaryButtonClass,
   secondaryButtonClass,
+  BUTTON_EMOJI,
 } from "../components/ui";
+import { useI18n } from "../i18n/i18n-context";
+import { pageTitle } from "../i18n/page-title";
 import { getPasskeyAvailability, getTurnstileConfig } from "../lib/account-functions";
 import { authClient } from "../lib/auth-client";
 import { formatOtp, normalizeOtp, OTP_LENGTH } from "../lib/otp-code";
@@ -16,6 +20,7 @@ import {
   requestPasskeyOffer,
   usePasskeysSupported,
 } from "../lib/passkey-browser";
+import { signInErrorMessage } from "../lib/sign-in-errors";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: ({ context }) => {
@@ -30,6 +35,9 @@ export const Route = createFileRoute("/login")({
     ]);
     return { turnstile, passkeys };
   },
+  head: ({ match }) => ({
+    meta: [{ title: pageTitle({ language: match.context.language, page: (t) => t.login.title }) }],
+  }),
   component: LoginPage,
 });
 
@@ -41,10 +49,14 @@ const MAX_AUTO_FILL_FAILURES = 5;
 function LoginPage() {
   const router = useRouter();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { turnstile, passkeys: passkeysOffered } = Route.useLoaderData();
   const [step, setStep] = useState<Step>({ name: "email" });
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  // The request on its way, if any: its button shows a spinner, and every
+  // button waits until it settles.
+  const [busy, setBusy] = useState<"send" | "verify" | "passkey" | null>(null);
+  const pending = busy !== null;
   const supported = usePasskeysSupported();
   const passkeys = passkeysOffered && supported;
   // Sending a code needs a passed Turnstile challenge; entering it does not.
@@ -55,10 +67,10 @@ function LoginPage() {
 
   const sendCode = async ({ email }: { email: string }) => {
     if (!captcha) {
-      setError("Wait a moment for the check to finish.");
+      setError(t.login.waitForCheck);
       return;
     }
-    setPending(true);
+    setBusy("send");
     setError(null);
     const { error: sendError } = await authClient.emailOtp.sendVerificationOtp(
       { email, type: "sign-in" },
@@ -66,9 +78,9 @@ function LoginPage() {
     );
     setCaptcha(null);
     setCaptchaRound((round) => round + 1);
-    setPending(false);
+    setBusy(null);
     if (sendError) {
-      setError(sendError.message ?? "Could not send the code. Please try again.");
+      setError(signInErrorMessage({ error: sendError, step: "send", t }));
       return;
     }
     setStep({ name: "otp", email });
@@ -79,12 +91,12 @@ function LoginPage() {
   );
 
   const verifyCode = async ({ email, otp }: { email: string; otp: string }) => {
-    setPending(true);
+    setBusy("verify");
     setError(null);
     const { error: verifyError } = await authClient.signIn.emailOtp({ email, otp });
-    setPending(false);
     if (verifyError) {
-      setError(verifyError.message ?? "That code is not right. Please try again.");
+      setBusy(null);
+      setError(signInErrorMessage({ error: verifyError, step: "verify", t }));
       return;
     }
     if (passkeys) {
@@ -113,7 +125,7 @@ function LoginPage() {
     // a failed press, and would otherwise wipe that failure's message.
     if (!autoFill) {
       buttonInFlight.current = true;
-      setPending(true);
+      setBusy("passkey");
       setError(null);
     }
     const { error: passkeyError } = await authClient.signIn.passkey({ autoFill });
@@ -122,9 +134,9 @@ function LoginPage() {
     }
     if (passkeyError) {
       if (!autoFill) {
-        setPending(false);
+        setBusy(null);
       }
-      const message = passkeySignInErrorMessage(passkeyError);
+      const message = passkeySignInErrorMessage({ error: passkeyError, t });
       if (message) {
         setError(message);
       }
@@ -167,11 +179,12 @@ function LoginPage() {
 
   return (
     <main className="mx-auto flex max-w-sm flex-col gap-6 p-4 sm:p-8">
-      <h1 className="text-2xl font-bold">Sign in</h1>
+      <h1 className="text-2xl font-bold">{t.login.title}</h1>
       {step.name === "email" ? (
         <>
           <EmailForm
             pending={pending}
+            sending={busy === "send"}
             ready={captcha !== null}
             passkeys={passkeys}
             challenge={challenge}
@@ -187,10 +200,12 @@ function LoginPage() {
                 }}
                 className={secondaryButtonClass}
               >
-                🔑 Sign in with a passkey
+                <BusyLabel busy={busy === "passkey"} emoji={BUTTON_EMOJI.passkey}>
+                  {t.login.passkeyButton}
+                </BusyLabel>
               </button>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                Add a passkey from your account page after signing in with your email address.
+                {t.login.passkeyNote}
               </p>
             </section>
           ) : null}
@@ -199,6 +214,7 @@ function LoginPage() {
         <OtpForm
           email={step.email}
           pending={pending}
+          checking={busy === "verify"}
           onSubmit={verifyCode}
           onChangeEmail={() => {
             setError(null);
@@ -217,12 +233,15 @@ function LoginPage() {
 
 function EmailForm({
   pending,
+  sending,
   ready,
   passkeys,
   challenge,
   onSubmit,
 }: {
   pending: boolean;
+  /** Sending the code is the request on its way. */
+  sending: boolean;
   /** True once the Turnstile challenge has passed. */
   ready: boolean;
   /** Whether the field also offers the browser's saved passkeys. */
@@ -230,6 +249,7 @@ function EmailForm({
   challenge: ReactNode;
   onSubmit: (params: { email: string }) => void;
 }) {
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -239,11 +259,9 @@ function EmailForm({
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
-        Enter your email address and we will send you an 8-digit sign-in code.
-      </p>
+      <p className="text-sm text-neutral-600 dark:text-neutral-400">{t.login.emailIntro}</p>
       <label className="flex flex-col gap-1 text-sm">
-        Email address
+        {t.login.emailLabel}
         <input
           type="email"
           name="email"
@@ -258,11 +276,11 @@ function EmailForm({
       </label>
       {challenge}
       <button type="submit" disabled={pending || !ready} className={primaryButtonClass}>
-        {pending ? "Sending…" : "Send code"}
+        <BusyLabel busy={sending} emoji={BUTTON_EMOJI.sendCode}>
+          {t.login.sendCode}
+        </BusyLabel>
       </button>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
-        New here? Signing in creates your account.
-      </p>
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">{t.login.newHere}</p>
     </form>
   );
 }
@@ -274,15 +292,19 @@ function EmailForm({
 function OtpForm({
   email,
   pending,
+  checking,
   onSubmit,
   onChangeEmail,
 }: {
   email: string;
   pending: boolean;
+  /** Checking the code is the request on its way. */
+  checking: boolean;
   onSubmit: (params: { email: string; otp: string }) => void;
   /** Back to the email step, to send a code again or to another address. */
   onChangeEmail: () => void;
 }) {
+  const { t } = useI18n();
   const [otp, setOtp] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -293,11 +315,12 @@ function OtpForm({
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <p className="text-sm text-neutral-600 dark:text-neutral-400">
-        We sent an 8-digit code to <span className="font-medium">{email}</span>. Enter it below to
-        sign in.
+        {t.login.codeIntro.before}
+        <span className="font-medium">{email}</span>
+        {t.login.codeIntro.after}
       </p>
       <label className="flex flex-col gap-1 text-sm">
-        Sign-in code
+        {t.login.codeLabel}
         <input
           type="text"
           name="otp"
@@ -320,18 +343,18 @@ function OtpForm({
         disabled={pending || otp.length !== OTP_LENGTH}
         className={primaryButtonClass}
       >
-        {pending ? "Checking…" : "Sign in"}
+        <BusyLabel busy={checking} emoji={BUTTON_EMOJI.signIn}>
+          {t.login.signIn}
+        </BusyLabel>
       </button>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
-        No code, or the wrong address? Go back to the email step to send a new one.
-      </p>
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">{t.login.codeHint}</p>
       <button
         type="button"
         className={`${linkButtonClass} self-start`}
         disabled={pending}
         onClick={onChangeEmail}
       >
-        Back to the email step
+        {t.login.backToEmail}
       </button>
     </form>
   );

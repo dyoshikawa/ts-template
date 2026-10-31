@@ -1,26 +1,34 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { useI18n } from "../i18n/i18n-context";
 import { APP_NAME } from "../lib/app";
 import { type SessionData } from "../lib/auth-functions";
 import { loadAuthClient } from "../lib/load-auth-client";
 import { disableNotifications } from "../lib/push-client";
 import { Drawer } from "./drawer";
 import { InstallButton } from "./install-button";
+import { LanguageSwitcher } from "./language-switcher";
 import { Logo } from "./logo";
+import { BusyLabel, Emoji } from "./spinner";
+import { BUTTON_EMOJI } from "./ui";
 
 const menuLinkClass =
   "flex min-h-12 items-center gap-3 px-4 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800";
 
 export function Header({ session }: { session: SessionData }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const close = () => {
     setMenuOpen(false);
   };
 
+  // The menu stays open with a spinner on the button until the session has
+  // ended, so the user sees the sign-out happening.
   const signOut = async () => {
-    close();
+    setSigningOut(true);
     // Fetched first, so a failed fetch does not leave notifications switched
     // off while the session goes on; without the client, sign out through
     // the endpoint it would call.
@@ -34,6 +42,8 @@ export function Header({ session }: { session: SessionData }) {
       await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => {});
     }
     await router.invalidate();
+    setSigningOut(false);
+    close();
   };
 
   return (
@@ -41,7 +51,7 @@ export function Header({ session }: { session: SessionData }) {
       <div className="flex items-center gap-1">
         <button
           type="button"
-          aria-label="Menu"
+          aria-label={t.common.menu}
           aria-expanded={menuOpen}
           onClick={() => {
             setMenuOpen(true);
@@ -50,10 +60,13 @@ export function Header({ session }: { session: SessionData }) {
         >
           ☰
         </button>
-        <Link to="/" aria-label="Home" className="flex min-h-11 items-center">
+        <Link to="/" aria-label={t.common.home} className="flex min-h-11 items-center">
           <Logo size={32} />
         </Link>
       </div>
+      {/* Also in the menu, on purpose: the bar shows who is signed in (or that
+          nobody is) on every screen and is the one-tap way there; the menu
+          lists every destination so it reads complete. */}
       {session ? (
         <Link
           to="/account"
@@ -63,38 +76,51 @@ export function Header({ session }: { session: SessionData }) {
         </Link>
       ) : (
         <Link to="/login" className="flex min-h-11 items-center px-2 text-sm underline">
-          Sign in
+          {t.common.signIn}
         </Link>
       )}
 
-      <Drawer open={menuOpen} title={APP_NAME} onClose={close}>
+      <Drawer open={menuOpen} title={APP_NAME} closeLabel={t.common.closeMenu} onClose={close}>
         {session ? (
           <>
             <p className="truncate px-4 py-3 text-xs text-neutral-600 dark:text-neutral-400">
               {session.user.email}
             </p>
             <Link to="/" onClick={close} className={menuLinkClass}>
-              🏠 Home
+              <Emoji>{BUTTON_EMOJI.home}</Emoji>
+              {t.common.home}
             </Link>
             <Link to="/account" onClick={close} className={menuLinkClass}>
-              👤 Account
+              <Emoji>{BUTTON_EMOJI.account}</Emoji>
+              {t.common.account}
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
+            <LanguageSwitcher className="px-4 py-2" />
             <div className="mt-auto border-t border-neutral-200 dark:border-neutral-800">
-              <button type="button" onClick={signOut} className={`${menuLinkClass} w-full`}>
-                Sign out
+              <button
+                type="button"
+                disabled={signingOut}
+                onClick={signOut}
+                className={`${menuLinkClass} w-full disabled:opacity-50`}
+              >
+                <BusyLabel busy={signingOut} emoji={BUTTON_EMOJI.signOut}>
+                  {t.common.signOut}
+                </BusyLabel>
               </button>
             </div>
           </>
         ) : (
           <>
             <Link to="/" onClick={close} className={menuLinkClass}>
-              🏠 Home
+              <Emoji>{BUTTON_EMOJI.home}</Emoji>
+              {t.common.home}
             </Link>
             <Link to="/login" onClick={close} className={menuLinkClass}>
-              🔑 Sign in
+              <Emoji>{BUTTON_EMOJI.signIn}</Emoji>
+              {t.common.signIn}
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
+            <LanguageSwitcher className="px-4 py-2" />
           </>
         )}
       </Drawer>

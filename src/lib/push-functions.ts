@@ -1,10 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import * as z from "zod/mini";
 
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
+import { requestLanguage } from "../i18n/language";
+import { messagesFor } from "../i18n/messages";
+import { createAuth } from "./auth";
 import { requireUserId } from "./auth-server";
 import { notifyUser, saveSubscription, subscriptionInput, vapidKeys } from "./push";
 
@@ -47,7 +51,14 @@ export const deletePushSubscription = createServerFn({ method: "POST" })
  * `PUSH_TEST_LIMITER` binding caps how often one user may ask.
  */
 export const sendTestNotification = createServerFn({ method: "POST" }).handler(async () => {
-  const userId = await requireUserId();
+  const request = getRequest();
+  const session = await createAuth({ request }).api.getSession({ headers: request.headers });
+  if (!session) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  const userId = session.user.id;
+  // In the user's language: the saved choice, else this page's.
+  const t = messagesFor(requestLanguage({ request, saved: session.user.language })).notifications;
   const { success } = await env.PUSH_TEST_LIMITER.limit({ key: userId });
   if (!success) {
     return { ok: false as const, reason: "rate-limited" as const };
@@ -55,8 +66,8 @@ export const sendTestNotification = createServerFn({ method: "POST" }).handler(a
   const result = await notifyUser({
     userId,
     notification: {
-      title: "Test notification",
-      body: "Push notifications are working on this device.",
+      title: t.test.title,
+      body: t.test.body,
       url: "/account",
     },
   });

@@ -1,6 +1,7 @@
 import { APIError } from "better-auth/api";
 
 import { isEmailAllowed } from "./sign-in-allowlist";
+import { EMAIL_NOT_ALLOWED, SIGN_IN_UNAVAILABLE } from "./sign-in-errors";
 import { logTurnstileUnconfigured, type TurnstileConfig } from "./turnstile";
 
 /** The endpoint that mails a code; the one Turnstile guards. */
@@ -118,6 +119,7 @@ export function guardAuthRequest({
       logTurnstileUnconfigured();
       throw new APIError("SERVICE_UNAVAILABLE", {
         message: "Sign-in is not available: the verification check is not set up.",
+        code: SIGN_IN_UNAVAILABLE,
       });
     }
     if (fields.type !== "sign-in") {
@@ -125,7 +127,10 @@ export function guardAuthRequest({
     }
   }
   if (typeof fields.email === "string" && !isEmailAllowed(fields.email)) {
-    throw new APIError("FORBIDDEN", { message: "This email address cannot sign in." });
+    throw new APIError("FORBIDDEN", {
+      message: "This email address cannot sign in.",
+      code: EMAIL_NOT_ALLOWED,
+    });
   }
 }
 
@@ -146,6 +151,9 @@ export async function assertPasskeyOwnerAllowed({
 }): Promise<void> {
   const email = await findOwnerEmail(credentialId);
   if (email === null || !isEmailAllowed(email)) {
-    throw new APIError("FORBIDDEN", { message: "This email address cannot sign in." });
+    throw new APIError("FORBIDDEN", {
+      message: "This email address cannot sign in.",
+      code: EMAIL_NOT_ALLOWED,
+    });
   }
 }

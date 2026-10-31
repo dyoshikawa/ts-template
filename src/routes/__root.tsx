@@ -2,9 +2,14 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { type ReactNode, useEffect } from "react";
 
 import { Header } from "../components/header";
+import { NavigationProgress } from "../components/navigation-progress";
+import { PullToReload } from "../components/pull-to-reload";
+import { Snackbar } from "../components/snackbar";
+import { I18nProvider, useI18n } from "../i18n/i18n-context";
 import { APP_NAME } from "../lib/app";
-import { getSession } from "../lib/auth-functions";
+import { getRootContext } from "../lib/auth-functions";
 import { listenForInstallOffers } from "../lib/install";
+import { guardAgainstPageZoom } from "../lib/zoom-guard";
 
 import appCss from "../styles.css?url";
 
@@ -13,12 +18,18 @@ import appCss from "../styles.css?url";
 listenForInstallOffers();
 
 export const Route = createRootRoute({
-  // Resolved once per navigation and exposed to every route as `context.session`.
-  beforeLoad: async () => ({ session: await getSession() }),
+  // Resolved once per navigation and exposed to every route as
+  // `context.session` and `context.language`.
+  beforeLoad: () => getRootContext(),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      {
+        // No pinch zoom anywhere; iOS ignores this, hence guardAgainstPageZoom too.
+        name: "viewport",
+        content:
+          "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      },
       { title: APP_NAME },
       { name: "color-scheme", content: "light dark" },
       { name: "application-name", content: APP_NAME },
@@ -38,20 +49,28 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-  const { session } = Route.useRouteContext();
+  const { session, language } = Route.useRouteContext();
   useServiceWorker();
+  useEffect(guardAgainstPageZoom, []);
 
   return (
-    <RootDocument>
-      <Header session={session} />
-      <Outlet />
-    </RootDocument>
+    <I18nProvider language={language}>
+      <RootDocument>
+        <NavigationProgress />
+        <PullToReload />
+        <Header session={session} />
+        <Outlet />
+        <Snackbar />
+      </RootDocument>
+    </I18nProvider>
   );
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  // Follows a switch at once, before the server has saved it.
+  const { language } = useI18n();
   return (
-    <html lang="en">
+    <html lang={language}>
       <head>
         <HeadContent />
         {/* Written here rather than in `head()`: HeadContent keeps one meta per

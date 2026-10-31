@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#2563eb" />
-    <title>ts-template — Offline</title>
+    <title>ts-template — オフライン / Offline</title>
     <style>
       body {
         margin: 0;
@@ -49,9 +49,17 @@
   <body>
     <main>
       <img src="/icons/icon-192.png" width="96" height="96" alt="" />
+      <!-- A static page the service worker serves without the app, so it
+           speaks both of the app's languages at once. -->
+      <h1 lang="ja">オフラインです</h1>
+      <p lang="ja">
+        ts-template にはインターネット接続が必要です。接続を確認してもう一度お試しください。
+      </p>
       <h1>You are offline</h1>
       <p>ts-template needs an internet connection. Check your connection and try again.</p>
-      <button type="button" onclick="location.reload()">Reload</button>
+      <button type="button" onclick="location.reload()">
+        <span lang="ja">🔄 再読み込み</span> / Reload
+      </button>
     </main>
   </body>
 </html>
