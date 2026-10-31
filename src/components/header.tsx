@@ -1,12 +1,14 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { useI18n } from "../i18n/i18n-context";
 import { APP_NAME } from "../lib/app";
 import { type SessionData } from "../lib/auth-functions";
 import { loadAuthClient } from "../lib/load-auth-client";
 import { disableNotifications } from "../lib/push-client";
 import { Drawer } from "./drawer";
 import { InstallButton } from "./install-button";
+import { LanguageSwitcher } from "./language-switcher";
 import { Logo } from "./logo";
 import { BusyLabel, Emoji } from "./spinner";
 import { BUTTON_EMOJI } from "./ui";
@@ -16,6 +18,7 @@ const menuLinkClass =
 
 export function Header({ session }: { session: SessionData }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const close = () => {
@@ -48,7 +51,7 @@ export function Header({ session }: { session: SessionData }) {
       <div className="flex items-center gap-1">
         <button
           type="button"
-          aria-label="Menu"
+          aria-label={t.common.menu}
           aria-expanded={menuOpen}
           onClick={() => {
             setMenuOpen(true);
@@ -57,7 +60,7 @@ export function Header({ session }: { session: SessionData }) {
         >
           ☰
         </button>
-        <Link to="/" aria-label="Home" className="flex min-h-11 items-center">
+        <Link to="/" aria-label={t.common.home} className="flex min-h-11 items-center">
           <Logo size={32} />
         </Link>
       </div>
@@ -73,11 +76,11 @@ export function Header({ session }: { session: SessionData }) {
         </Link>
       ) : (
         <Link to="/login" className="flex min-h-11 items-center px-2 text-sm underline">
-          Sign in
+          {t.common.signIn}
         </Link>
       )}
 
-      <Drawer open={menuOpen} title={APP_NAME} closeLabel="Close menu" onClose={close}>
+      <Drawer open={menuOpen} title={APP_NAME} closeLabel={t.common.closeMenu} onClose={close}>
         {session ? (
           <>
             <p className="truncate px-4 py-3 text-xs text-neutral-600 dark:text-neutral-400">
@@ -85,13 +88,14 @@ export function Header({ session }: { session: SessionData }) {
             </p>
             <Link to="/" onClick={close} className={menuLinkClass}>
               <Emoji>{BUTTON_EMOJI.home}</Emoji>
-              Home
+              {t.common.home}
             </Link>
             <Link to="/account" onClick={close} className={menuLinkClass}>
               <Emoji>{BUTTON_EMOJI.account}</Emoji>
-              Account
+              {t.common.account}
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
+            <LanguageSwitcher className="px-4 py-2" />
             <div className="mt-auto border-t border-neutral-200 dark:border-neutral-800">
               <button
                 type="button"
@@ -100,7 +104,7 @@ export function Header({ session }: { session: SessionData }) {
                 className={`${menuLinkClass} w-full disabled:opacity-50`}
               >
                 <BusyLabel busy={signingOut} emoji={BUTTON_EMOJI.signOut}>
-                  Sign out
+                  {t.common.signOut}
                 </BusyLabel>
               </button>
             </div>
@@ -109,13 +113,14 @@ export function Header({ session }: { session: SessionData }) {
           <>
             <Link to="/" onClick={close} className={menuLinkClass}>
               <Emoji>{BUTTON_EMOJI.home}</Emoji>
-              Home
+              {t.common.home}
             </Link>
             <Link to="/login" onClick={close} className={menuLinkClass}>
               <Emoji>{BUTTON_EMOJI.signIn}</Emoji>
-              Sign in
+              {t.common.signIn}
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
+            <LanguageSwitcher className="px-4 py-2" />
           </>
         )}
       </Drawer>

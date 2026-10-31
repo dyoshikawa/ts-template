@@ -1,9 +1,15 @@
-/** What a passkey is called when it has no label of its own. */
+/**
+ * What a passkey is stored under when it has no label of its own; the pages
+ * show their own word for it (see `passkeyLabel`), the notice mail this.
+ */
 export const PASSKEY_LABEL = "Passkey";
 
-/** A stored passkey's label for display. */
-export function passkeyLabel({ name }: { name: string | null }): string {
-  return name ?? PASSKEY_LABEL;
+/**
+ * A stored passkey's label for display: its own, or `unnamed` (the page's
+ * word for "passkey") when it has none or only the stored fallback.
+ */
+export function passkeyLabel({ name, unnamed }: { name: string | null; unnamed: string }): string {
+  return name === null || name === PASSKEY_LABEL ? unnamed : name;
 }
 
 /** Longest label stored for a passkey. */
@@ -52,12 +58,16 @@ const BROWSERS: Array<[RegExp, string]> = [
   [/Safari\//, "Safari"],
 ];
 
-/** "Safari on iPhone", "Chrome on Windows"…; `undefined` when nothing is recognized. */
+/**
+ * "Safari · iPhone", "Chrome · Windows"…; `undefined` when nothing is
+ * recognized. Product names only, joined by a dot, so the label reads the
+ * same in every language the app speaks.
+ */
 function describeUserAgent(userAgent: string): string | undefined {
   const platform = PLATFORMS.find(([pattern]) => pattern.test(userAgent))?.[1];
   const browser = BROWSERS.find(([pattern]) => pattern.test(userAgent))?.[1];
   if (platform && browser) {
-    return `${browser} on ${platform}`;
+    return `${browser} · ${platform}`;
   }
   return platform ?? browser;
 }

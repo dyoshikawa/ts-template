@@ -29,6 +29,8 @@ export const BUTTON_EMOJI = {
   notificationsOff: "🔕",
   testNotification: "📨",
   delete: "🗑️",
+  retry: "🔄",
+  language: "🌐",
 } as const;
 
 /** For actions that destroy data, e.g. closing the account. */

@@ -56,9 +56,9 @@ function countChallenges(page: Page): () => number {
 }
 
 async function signOut(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Menu", exact: true }).click();
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.getByRole("link", { name: "Sign in" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "メニュー", exact: true }).click();
+  await page.getByRole("button", { name: "サインアウト", exact: true }).click();
+  await expect(page.getByRole("link", { name: "サインイン" }).first()).toBeVisible();
 }
 
 // Local runs offer passkeys on the default ports only (`LOCAL_ORIGINS` in
@@ -68,9 +68,9 @@ test.skip(
   "passkeys are offered on localhost:4173 only",
 );
 
-const OFFER_HEADING = "🔑 Sign in with a passkey next time?";
+const OFFER_HEADING = "次回はパスキーでサインインしますか？";
 /** The label the iPhone descriptor's user agent gives a new passkey. */
-const LABEL = "Safari on iPhone";
+const LABEL = "Safari · iPhone";
 
 test("a passkey offered after the email sign-in signs in later and can be deleted", async ({
   page,
@@ -83,8 +83,8 @@ test("a passkey offered after the email sign-in signs in later and can be delete
 
   // Offered once, on the home page.
   await expect(page.getByRole("heading", { name: OFFER_HEADING })).toBeVisible();
-  await page.getByRole("button", { name: "Add a passkey" }).click();
-  await expect(page.getByRole("heading", { name: "🔑 Passkey added" })).toBeVisible();
+  await page.getByRole("button", { name: "パスキーを追加" }).click();
+  await expect(page.getByRole("heading", { name: "パスキーを追加しました" })).toBeVisible();
 
   // Listed under the device and browser it was made on.
   await page.goto("/account");
@@ -92,7 +92,7 @@ test("a passkey offered after the email sign-in signs in later and can be delete
 
   await signOut(page);
   await page.goto("/login");
-  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
+  await page.getByRole("button", { name: "パスキーでサインイン" }).click();
   await page.waitForURL("/");
   await expect(page.getByRole("link", { name: email })).toBeVisible();
   // Signing in with a passkey offers no second one.
@@ -102,8 +102,8 @@ test("a passkey offered after the email sign-in signs in later and can be delete
   page.once("dialog", (dialog) => {
     void dialog.accept();
   });
-  await page.getByRole("button", { name: `Delete "${LABEL}"` }).click();
-  await expect(page.getByText("No passkeys yet.")).toBeVisible();
+  await page.getByRole("button", { name: `「${LABEL}」を削除` }).click();
+  await expect(page.getByText("パスキーはまだありません。")).toBeVisible();
 
   // The deleted passkey no longer signs in; email still does. Signing out on
   // the account page sends the browser on to /login, whose own challenge is
@@ -119,18 +119,18 @@ test("a passkey offered after the email sign-in signs in later and can be delete
   // would do before asking.
   await expect.poll(challenges).toBeGreaterThan(beforeVisit);
   const before = challenges();
-  await page.getByRole("button", { name: "Sign in with a passkey" }).click();
+  await page.getByRole("button", { name: "パスキーでサインイン" }).click();
   const alert = page.getByRole("alert");
-  await expect(alert).toContainText("Sign in with your email address instead");
+  await expect(alert).toContainText("メールアドレスでサインインしてください");
   await expect.poll(challenges).toBeGreaterThanOrEqual(before + 2);
-  await expect(alert).toContainText("Sign in with your email address instead");
+  await expect(alert).toContainText("メールアドレスでサインインしてください");
 });
 
 test("the email field's passkey suggestion signs in", async ({ page, email }) => {
   await addVirtualAuthenticator(page);
   await signIn({ page, email });
-  await page.getByRole("button", { name: "Add a passkey" }).click();
-  await expect(page.getByRole("heading", { name: "🔑 Passkey added" })).toBeVisible();
+  await page.getByRole("button", { name: "パスキーを追加" }).click();
+  await expect(page.getByRole("heading", { name: "パスキーを追加しました" })).toBeVisible();
   await signOut(page);
 
   // The virtual authenticator picks the suggestion by itself, as a user tapping it would.
@@ -139,10 +139,10 @@ test("the email field's passkey suggestion signs in", async ({ page, email }) =>
   await expect(page.getByRole("link", { name: email })).toBeVisible();
 });
 
-test('"Not now" stops the offer on this device', async ({ page, email }) => {
+test('"今はしない" stops the offer on this device', async ({ page, email }) => {
   await addVirtualAuthenticator(page);
   await signIn({ page, email });
-  await page.getByRole("button", { name: "Not now" }).click();
+  await page.getByRole("button", { name: "今はしない" }).click();
   await expect(page.getByRole("heading", { name: OFFER_HEADING })).toHaveCount(0);
 
   await signOut(page);
@@ -151,8 +151,8 @@ test('"Not now" stops the offer on this device', async ({ page, email }) => {
 
   // The account page still adds one.
   await page.goto("/account");
-  await page.getByRole("button", { name: "Add a passkey on this device" }).click();
-  await expect(page.getByText("Passkey added.")).toBeVisible();
+  await page.getByRole("button", { name: "この端末でパスキーを追加" }).click();
+  await expect(page.getByText("パスキーを追加しました。")).toBeVisible();
   await expect(page.getByText(LABEL)).toBeVisible();
 });
 

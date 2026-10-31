@@ -18,6 +18,11 @@ export const user = sqliteTable("user", {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
+  /**
+   * The language the user picked (`ja` / `en`); null until they pick one,
+   * when the cookie or the browser's languages decide (`resolveLanguage`).
+   */
+  language: text("language", { enum: ["ja", "en"] }),
 });
 
 export const session = sqliteTable(

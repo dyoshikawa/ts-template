@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
  * A small spinning ring in the current text color: the sign that the
  * control next to it is waiting for the server. Never covers the screen.
  */
-export function Spinner({ className = "" }: { className?: string }) {
+function Spinner({ className = "" }: { className?: string }) {
   return (
     <span
       aria-hidden="true"

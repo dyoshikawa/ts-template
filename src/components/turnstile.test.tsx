@@ -1,6 +1,7 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ja } from "../i18n/ja";
 import { Turnstile } from "./turnstile";
 
 afterEach(() => {
@@ -26,7 +27,8 @@ describe("Turnstile", () => {
       <Turnstile config={{ status: "unconfigured" }} action="sign-in" onToken={onToken} />,
     );
     await act(async () => {});
-    expect(getByRole("alert").textContent).toContain("unavailable");
+    // Outside a provider the text is Japanese, the default language.
+    expect(getByRole("alert").textContent).toBe(ja.turnstile.unavailable);
     expect(onToken).toHaveBeenCalledWith(null);
     expect(onToken).not.toHaveBeenCalledWith(expect.any(String));
     expect(document.querySelector("script[src*='challenges.cloudflare.com']")).toBeNull();

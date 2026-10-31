@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
+import { useI18n } from "../i18n/i18n-context";
 import {
   isStandalone,
   NO_PULL_SELECTOR,
@@ -7,12 +8,6 @@ import {
   pullFrame,
   releaseReloads,
 } from "../lib/pull-to-reload";
-
-const LABELS = {
-  pullToReload: "Pull to reload",
-  releaseToReload: "Release to reload",
-  reloading: "Reloading…",
-};
 
 /** How long (ms) a cancelled pull takes to spring back out of view (matches styles.css). */
 const SPRING_BACK_MS = 200;
@@ -34,7 +29,7 @@ const HIDDEN_OFFSET = -48;
  * reload drops it.
  */
 export function PullToReload() {
-  const t = { common: LABELS };
+  const { t } = useI18n();
   // False on the server and in a browser tab; the display mode never changes while the page lives.
   const enabled = useSyncExternalStore(subscribeToNothing, runsInstalled, () => false);
   const root = useRef<HTMLOutputElement>(null);

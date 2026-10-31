@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { en } from "../i18n/en";
 import { APP_NAME } from "./app";
 import {
   declinePasskeyOffer,
@@ -24,26 +25,28 @@ afterEach(() => {
 describe("passkey error messages", () => {
   it("stays quiet when the user closed the browser's dialog", () => {
     for (const code of ["ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY", "ERROR_CEREMONY_ABORTED"]) {
-      expect(passkeyRegistrationErrorMessage({ status: 400, code })).toBeNull();
-      expect(passkeySignInErrorMessage({ status: 400, code })).toBeNull();
+      expect(passkeyRegistrationErrorMessage({ error: { status: 400, code }, t: en })).toBeNull();
+      expect(passkeySignInErrorMessage({ error: { status: 400, code }, t: en })).toBeNull();
     }
   });
 
   it("asks for a fresh email sign-in when the session is too old to add a passkey", () => {
-    expect(passkeyRegistrationErrorMessage({ status: 403, code: "SESSION_NOT_FRESH" })).toContain(
-      "sign in again with your email address",
-    );
+    expect(
+      passkeyRegistrationErrorMessage({ error: { status: 403, code: "SESSION_NOT_FRESH" }, t: en }),
+    ).toContain("sign in again with your email address");
   });
 
   it("points to email sign-in when a passkey fails", () => {
-    expect(passkeySignInErrorMessage({ status: 401, code: "PASSKEY_NOT_FOUND" })).toContain(
-      "Sign in with your email address",
+    expect(
+      passkeySignInErrorMessage({ error: { status: 401, code: "PASSKEY_NOT_FOUND" }, t: en }),
+    ).toContain("Sign in with your email address");
+    expect(passkeySignInErrorMessage({ error: { status: 500 }, t: en })).toContain(
+      "email address instead",
     );
-    expect(passkeySignInErrorMessage({ status: 500 })).toContain("email address instead");
   });
 
   it("says so when the account may not sign in", () => {
-    expect(passkeySignInErrorMessage({ status: 403, code: "FORBIDDEN" })).toBe(
+    expect(passkeySignInErrorMessage({ error: { status: 403, code: "FORBIDDEN" }, t: en })).toBe(
       "This account cannot sign in.",
     );
   });

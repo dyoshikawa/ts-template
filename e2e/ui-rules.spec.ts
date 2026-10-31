@@ -34,8 +34,8 @@ test("the install guide fills a phone's screen and is a centred dialog on a tabl
   page,
 }) => {
   await page.goto("/");
-  const open = page.getByRole("button", { name: "Add to Home Screen" });
-  const guide = page.getByRole("dialog", { name: "How to add to your Home Screen" });
+  const open = page.getByRole("button", { name: "ホーム画面に追加" });
+  const guide = page.getByRole("dialog", { name: "ホーム画面に追加する方法" });
 
   await open.click();
   const viewport = page.viewportSize();
@@ -77,7 +77,7 @@ test("the menu fills a phone's screen and closes on ✕, Escape and a swipe back
   page,
 }) => {
   await page.goto("/");
-  const openMenu = page.getByRole("button", { name: "Menu", exact: true });
+  const openMenu = page.getByRole("button", { name: "メニュー", exact: true });
   const menu = page.getByRole("navigation", { name: "ts-template" });
   const viewport = page.viewportSize();
 
@@ -89,7 +89,7 @@ test("the menu fills a phone's screen and closes on ✕, Escape and a swipe back
   expect(box?.width).toBe(viewport?.width);
   expect(box?.height).toBe(viewport?.height);
 
-  await menu.getByRole("button", { name: "Close menu" }).click();
+  await menu.getByRole("button", { name: "メニューを閉じる" }).click();
   await expect(menu).toBeHidden();
 
   await openMenu.click();
@@ -145,13 +145,13 @@ test("a button waiting on the server spins in place and blocks nothing", async (
 }) => {
   await page.goto("/login");
   await delay(page, (url) => url.pathname.endsWith("/email-otp/send-verification-otp"));
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
-  const send = page.getByRole("button", { name: "Send code" });
+  await page.getByRole("textbox", { name: "メールアドレス" }).fill(email);
+  const send = page.getByRole("button", { name: "コードを送信" });
   await send.click();
   await expect(send).toBeDisabled();
   await expect(send.locator("[data-spinner]")).toBeVisible();
   expect(await screenIsBlocked(page)).toBe(false);
-  await expect(page.getByRole("textbox", { name: "Sign-in code" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "サインインコード" })).toBeVisible();
 });
 
 test("a failed request clears the spinner and says so where the user acted", async ({
@@ -163,8 +163,8 @@ test("a failed request clears the spinner and says so where the user acted", asy
     (url) => url.pathname.endsWith("/email-otp/send-verification-otp"),
     (route) => route.fulfill({ status: 500, json: { message: "boom" } }),
   );
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
-  const send = page.getByRole("button", { name: "Send code" });
+  await page.getByRole("textbox", { name: "メールアドレス" }).fill(email);
+  const send = page.getByRole("button", { name: "コードを送信" });
   await send.click();
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(send.locator("[data-spinner]")).toHaveCount(0);
@@ -172,7 +172,7 @@ test("a failed request clears the spinner and says so where the user acted", asy
 
 test("a slow page load shows a bar along the top and blocks nothing", async ({ page }) => {
   await page.goto("/");
-  const signInLink = page.getByRole("main").getByRole("link", { name: "Sign in" });
+  const signInLink = page.getByRole("main").getByRole("link", { name: "サインイン" });
   await expect(signInLink).toBeVisible();
   // Every navigation asks the server for the session first: hold those back.
   await delay(page, (url) => url.pathname.startsWith("/_serverFn"));
@@ -191,8 +191,8 @@ test("signing out keeps the menu open with a spinner until the session is gone",
 }) => {
   await signIn({ page, email });
   await delay(page, (url) => url.pathname.endsWith("/api/auth/sign-out"));
-  await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const signOut = page.getByRole("button", { name: "Sign out", exact: true });
+  await page.getByRole("button", { name: "メニュー", exact: true }).click();
+  const signOut = page.getByRole("button", { name: "サインアウト", exact: true });
   await signOut.click();
   await expect(signOut).toBeDisabled();
   await expect(signOut.locator("[data-spinner]")).toBeVisible();
@@ -272,7 +272,7 @@ test("in the installed app a long pull from the top reloads, nothing else does",
   });
 
   // Not inside an open popup (the menu here).
-  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await page.getByRole("button", { name: "メニュー", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "ts-template" })).toBeVisible();
   expect(await pullDown({ page, y: 150, distance: 300 })).toBe(false);
 });
@@ -322,7 +322,7 @@ test("the pull indicator winds up, turns ready, spins on release and springs bac
   await pullTo(120);
   await expect(indicator).toHaveAttribute("data-state", "ready");
   await expect(badge).toHaveCSS("background-color", "rgb(37, 99, 235)");
-  await expect(label).toHaveText("Release to reload");
+  await expect(label).toHaveText("離して更新");
   await expect(label).toHaveCSS("opacity", "1");
   await shot("pull-120");
 
@@ -364,7 +364,7 @@ test("the pull indicator winds up, turns ready, spins on release and springs bac
   await expect(page.getByRole("heading", { name: HOME_HEADING })).toBeVisible();
   expect(
     JSON.parse((await page.evaluate(() => sessionStorage.getItem("pullOnUnload"))) ?? "null"),
-  ).toEqual({ state: "reloading", label: "Reloading…", animation: "pull-to-reload-spin" });
+  ).toEqual({ state: "reloading", label: "更新中…", animation: "pull-to-reload-spin" });
 
   // A short pull springs back out of view without reloading.
   await page.evaluate(() => {

@@ -1,3 +1,5 @@
+import { type Language } from "../i18n/language";
+import { messagesFor } from "../i18n/messages";
 import { formatOtp } from "./otp-code";
 
 /** A mail the app sends: subject plus plain-text and HTML bodies. */
@@ -7,30 +9,34 @@ export type OtpEmail = {
   html: string;
 };
 
+/** The sign-in code mail, in `language` (the page's that asked for it). */
 export function buildOtpEmail({
   appName,
   otp,
   expiresInMinutes,
+  language,
 }: {
   appName: string;
   otp: string;
   expiresInMinutes: number;
+  language: Language;
 }): OtpEmail {
+  const t = messagesFor(language).email.otp;
   const code = formatOtp(otp);
-  const subject = `${code} is your ${appName} sign-in code`;
+  const subject = t.subject({ code, app: appName });
   const text = [
-    `Your ${appName} sign-in code is:`,
+    t.intro({ app: appName }),
     "",
     code,
     "",
-    `The code expires in ${expiresInMinutes} minutes.`,
-    "If you did not ask for it, you can ignore this email.",
+    t.expires({ minutes: expiresInMinutes }),
+    t.ignore,
   ].join("\n");
   const html = [
-    `<p>Your ${escapeHtml(appName)} sign-in code is:</p>`,
+    `<p>${escapeHtml(t.intro({ app: appName }))}</p>`,
     `<p style="font-size:24px;font-weight:bold;letter-spacing:0.2em">${escapeHtml(code)}</p>`,
-    `<p>The code expires in ${expiresInMinutes} minutes.</p>`,
-    "<p>If you did not ask for it, you can ignore this email.</p>",
+    `<p>${escapeHtml(t.expires({ minutes: expiresInMinutes }))}</p>`,
+    `<p>${escapeHtml(t.ignore)}</p>`,
   ].join("\n");
 
   return { subject, text, html };

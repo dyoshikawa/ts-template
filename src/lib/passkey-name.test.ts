@@ -13,14 +13,14 @@ const IPHONE_CHROME =
 
 describe("passkeyName", () => {
   it("names the device and browser when the authenticator is unknown", () => {
-    expect(passkeyName({ provider: undefined, userAgent: IPHONE_SAFARI })).toBe("Safari on iPhone");
-    expect(passkeyName({ provider: undefined, userAgent: WINDOWS_EDGE })).toBe("Edge on Windows");
-    expect(passkeyName({ provider: undefined, userAgent: IPHONE_CHROME })).toBe("Chrome on iPhone");
+    expect(passkeyName({ provider: undefined, userAgent: IPHONE_SAFARI })).toBe("Safari · iPhone");
+    expect(passkeyName({ provider: undefined, userAgent: WINDOWS_EDGE })).toBe("Edge · Windows");
+    expect(passkeyName({ provider: undefined, userAgent: IPHONE_CHROME })).toBe("Chrome · iPhone");
   });
 
   it("puts a known password manager first", () => {
     expect(passkeyName({ provider: "Google Password Manager", userAgent: ANDROID_CHROME })).toBe(
-      "Google Password Manager (Chrome on Android)",
+      "Google Password Manager (Chrome · Android)",
     );
     expect(passkeyName({ provider: "1Password", userAgent: null })).toBe("1Password");
   });
@@ -36,8 +36,9 @@ describe("passkeyName", () => {
 });
 
 describe("passkeyLabel", () => {
-  it("shows the stored name, or the plain label without one", () => {
-    expect(passkeyLabel({ name: "Safari on iPhone" })).toBe("Safari on iPhone");
-    expect(passkeyLabel({ name: null })).toBe("Passkey");
+  it("shows the stored name, or the page's own word for a passkey without one", () => {
+    expect(passkeyLabel({ name: "Safari · iPhone", unnamed: "パスキー" })).toBe("Safari · iPhone");
+    expect(passkeyLabel({ name: null, unnamed: "パスキー" })).toBe("パスキー");
+    expect(passkeyLabel({ name: "Passkey", unnamed: "パスキー" })).toBe("パスキー");
   });
 });
