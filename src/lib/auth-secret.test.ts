@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { resolveAuthSecret } from "./auth-secret";
 
@@ -88,7 +88,7 @@ describe("resolveAuthSecret", () => {
     expect(resolveAuthSecret({ request: emulated })).toBe(DEV_SECRET);
   });
 
-  it("falls back to the development secret under `vite dev`", () => {
+  it("falls back to the development secret under `vp dev`", () => {
     vi.stubEnv("DEV", true);
     expect(resolveAuthSecret({ request: deployed })).toBe(DEV_SECRET);
     expect(logged).not.toHaveBeenCalled();

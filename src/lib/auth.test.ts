@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { createAuth } from "./auth";
 import { passkeyPlugins } from "./auth-passkey";
@@ -26,14 +26,14 @@ afterEach(() => {
 });
 
 describe("createAuth", () => {
-  it("refuses to run without BETTER_AUTH_SECRET outside `vite dev`", () => {
+  it("refuses to run without BETTER_AUTH_SECRET outside `vp dev`", () => {
     expect(() => createAuth({ request: deployed })).toThrow("BETTER_AUTH_SECRET");
     // Nor with the secret Better Auth would fall back to, which is public.
     vars.BETTER_AUTH_SECRET = "better-auth-secret-12345678901234567890";
     expect(() => createAuth({ request: deployed })).toThrow("BETTER_AUTH_SECRET");
   });
 
-  it("runs on its own secret under `vite dev`", () => {
+  it("runs on its own secret under `vp dev`", () => {
     vi.stubEnv("DEV", true);
     expect(() => createAuth({ request: local })).not.toThrow();
   });

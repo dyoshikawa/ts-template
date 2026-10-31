@@ -45,7 +45,7 @@ if (values.fresh) {
   rmSync(stateDir, { recursive: true, force: true });
 }
 if (values.build) {
-  run("pnpm", ["exec", "vite", "build"]);
+  run("pnpm", ["exec", "vp", "build"]);
 }
 if (!existsSync(BUILT_CONFIG)) {
   // oxlint-disable-next-line no-console

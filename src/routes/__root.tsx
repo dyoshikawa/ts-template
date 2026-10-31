@@ -87,7 +87,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 /**
- * Registers `public/sw.js` in production builds only; in `vite dev` a service
+ * Registers `public/sw.js` in production builds only; in `vp dev` a service
  * worker would fight HMR and cache stale modules.
  */
 function useServiceWorker() {

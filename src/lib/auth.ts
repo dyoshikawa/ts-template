@@ -55,7 +55,7 @@ function cookieAdvanced({ request }: { request: Request }) {
 /**
  * Builds a Better Auth instance for one request. Bindings (D1, Email Service)
  * are only reachable through `env`, and the base URL is taken from the request
- * so the same code serves `vite dev` and every deployed hostname.
+ * so the same code serves `vp dev` and every deployed hostname.
  *
  * Sign-in is passwordless: the user enters an email address, receives an
  * 8-digit one-time code, and enters that code. First-time addresses are

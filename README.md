@@ -35,7 +35,7 @@ an installable PWA and Web Push notifications — on the toolchain used by
   nonce-based Content-Security-Policy: each response gets a fresh nonce that TanStack Start puts on
   every script it renders, and `'strict-dynamic'` lets those load the rest. Loading anything from
   another origin (an image CDN, an analytics script) means adding it to `contentSecurityPolicy`;
-  the browser tests fail on any CSP violation. `vite dev` runs without the policy.
+  the browser tests fail on any CSP violation. `vp dev` runs without the policy.
 - **Japanese and English** — every piece of the app's text (labels, errors, page titles, the emails)
   comes from one catalogue per language (`src/i18n/ja.ts`, and `src/i18n/en.ts` typed against it,
   so a missing key fails the typecheck). The language is resolved on the server, so the first render
@@ -61,14 +61,15 @@ an installable PWA and Web Push notifications — on the toolchain used by
 | Runtime / tooling | [mise](https://mise.jdx.dev/)                                                                                  | `mise.toml`                                                 |
 | Package manager   | [pnpm](https://pnpm.io/)                                                                                       | `pnpm-workspace.yaml`, `.npmrc`                             |
 | Language          | [TypeScript](https://www.typescriptlang.org/)                                                                  | `tsconfig.json`                                             |
-| Unit tests        | [Vitest](https://vitest.dev/) + Testing Library                                                                | `vitest.config.ts`                                          |
+| Toolchain         | [Vite+](https://viteplus.dev/) (`vp`: Vite, Vitest, Oxlint, Oxfmt, staged-file checks)                         | `vite.config.ts`                                            |
+| Unit tests        | [Vitest](https://vitest.dev/) (through `vp test`) + Testing Library                                            | `vitest.config.ts`                                          |
 | Browser tests     | [Playwright](https://playwright.dev/) against the built Worker in the Cloudflare emulator                      | `playwright.config.ts`, `e2e/`                              |
-| Format            | [oxfmt](https://oxc.rs/)                                                                                       | `.oxfmtrc.json`                                             |
-| Lint              | [oxlint](https://oxc.rs/)                                                                                      | `.oxlintrc.json`                                            |
+| Format            | [Oxfmt](https://oxc.rs/) (through `vp fmt`)                                                                    | `vite.config.ts` (`fmt`)                                    |
+| Lint              | [Oxlint](https://oxc.rs/) (through `vp lint`)                                                                  | `vite.config.ts` (`lint`)                                   |
 | Unused code       | [knip](https://knip.dev/)                                                                                      | `knip.ts`                                                   |
 | Spelling          | [cspell](https://cspell.org/)                                                                                  | `cspell.json`                                               |
 | Secret scanning   | [secretlint](https://github.com/secretlint/secretlint)                                                         | `.secretlintrc.json`                                        |
-| Git hooks         | [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) + lint-staged                              | `package.json`, `.lintstagedrc.js`                          |
+| Git hooks         | Vite+ hooks (`vp staged` on pre-commit)                                                                        | `.vite-hooks/pre-commit`, `vite.config.ts` (`staged`)       |
 | AI rules          | [rulesync](https://github.com/dyoshikawa/rulesync)                                                             | `rulesync.jsonc`, `.rulesync/`                              |
 | Workflow lint     | [actionlint](https://github.com/rhysd/actionlint)                                                              | `.github/workflows/actionlint.yml`                          |
 | Action pinning    | [pinact](https://github.com/suzuki-shunsuke/pinact)                                                            | `.pinact.yaml`, `.github/workflows/pinact.yml`              |
@@ -87,7 +88,7 @@ pnpm dev           # http://localhost:5173 — the sign-in code is printed in th
 pnpm cicheck       # run everything CI runs (plus `pnpm e2e` for the browser tests)
 ```
 
-`pnpm dev` runs Vite's dev server: no email is sent (the code is logged) and Turnstile uses
+`pnpm dev` runs the Vite dev server (`vp dev`): no email is sent (the code is logged) and Turnstile uses
 Cloudflare's always-passing test keys. The service worker — and so install and push notifications —
 only runs in the built app: `pnpm dev:cf` builds it and serves it in the Cloudflare emulator (workerd)
 at `http://localhost:4173` with a local D1. Copy `.dev.vars.example` to `.dev.vars` for local
@@ -148,7 +149,7 @@ scheduled work to that handler.
 
 What the auth code enforces, so a change does not quietly drop one of them:
 
-- **The auth secret fails closed.** Outside `vite dev` and local requests, `resolveAuthSecret`
+- **The auth secret fails closed.** Outside `vp dev` and local requests, `resolveAuthSecret`
   (`src/lib/auth-secret.ts`) refuses to run when `BETTER_AUTH_SECRET` is unset, shorter than 32
   characters, or Better Auth's public default secret — Better Auth itself only refuses that default
   when `NODE_ENV` is `production`, which a Worker never sets. Every page then answers with an error
@@ -244,15 +245,15 @@ sends the new one to `/api/push/subscription`.
 
 | Script                   | Description                                                                             |
 | ------------------------ | --------------------------------------------------------------------------------------- |
-| `pnpm dev`               | Vite dev server                                                                         |
+| `pnpm dev`               | Vite dev server (`vp dev`)                                                              |
 | `pnpm dev:cf`            | Build and serve the Worker in the Cloudflare emulator (`--fresh` wipes the local state) |
-| `pnpm build`             | Build the client assets and the Worker into `dist`                                      |
+| `pnpm build`             | Build the client assets and the Worker into `dist` (`vp build`)                         |
 | `pnpm run deploy`        | Build and deploy to Cloudflare Workers                                                  |
-| `pnpm check`             | `fmt:check` + `oxlint` + `typecheck`                                                    |
+| `pnpm check`             | `vp check` (format, lint) + `typecheck`                                                 |
 | `pnpm cicheck`           | `cicheck:code` + `cicheck:content`                                                      |
 | `pnpm cicheck:code`      | `check` + `test`                                                                        |
 | `pnpm cicheck:content`   | `cspell` + `secretlint`                                                                 |
-| `pnpm test`              | Run the unit tests                                                                      |
+| `pnpm test`              | Run the unit tests (`vp test run`)                                                      |
 | `pnpm e2e`               | Run the browser tests against the built Worker in the emulator                          |
 | `pnpm db:generate`       | Generate a migration from `src/db/schema.ts` (`--name <change>`)                        |
 | `pnpm db:migrate:local`  | Apply migrations to the local D1                                                        |
@@ -261,7 +262,7 @@ sends the new one to `/api/push/subscription`.
 | `pnpm cf-typegen`        | Regenerate `worker-configuration.d.ts` after changing bindings                          |
 | `pnpm icons`             | Redraw the PWA icons                                                                    |
 | `pnpm vapid`             | Print a new VAPID key pair for push notifications                                       |
-| `pnpm fix`               | Auto-fix formatting and lint problems                                                   |
+| `pnpm fix`               | Auto-fix formatting and lint problems (`vp check --fix`)                                |
 | `pnpm generate`          | Regenerate AI tool configs from `.rulesync/`                                            |
 | `pnpm knip`              | Report unused files, exports, and dependencies                                          |
 
@@ -282,7 +283,7 @@ sends the new one to `/api/push/subscription`.
   step is genuinely required. CI installs with `--ignore-scripts`.
 - Every third-party GitHub Action is pinned to a full-length commit SHA, enforced by `pinact` in CI.
 - Workflows declare the narrowest `permissions:` block they need.
-- `secretlint` runs over every staged file through lint-staged, and over the whole tree in CI.
+- `secretlint` runs over every staged file through `vp staged`, and over the whole tree in CI.
 - Trivy scans the devcontainer Dockerfile for misconfigurations on every change, failing on
   `CRITICAL`/`HIGH`. Findings that are intentional go in `.trivyignore` with a reason.
 - The devcontainer installs [Safe Chain](https://github.com/AikidoSec/safe-chain) so npm/pnpm

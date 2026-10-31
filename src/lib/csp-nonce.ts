@@ -11,7 +11,7 @@ export const CSP_NONCE_HEADER = "x-csp-nonce";
  * This response's CSP nonce, for the router's `ssr.nonce`: on the server the
  * one src/server.ts put on the request, in the browser the one the page was
  * rendered with (TanStack Router writes it to `<meta property="csp-nonce">`).
- * `undefined` where there is none (`vite dev`).
+ * `undefined` where there is none (`vp dev`).
  */
 export const getCspNonce = createIsomorphicFn()
   .server(() => getRequest().headers.get(CSP_NONCE_HEADER) ?? undefined)
