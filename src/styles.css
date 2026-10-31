@@ -64,3 +64,126 @@ select {
   background-size: 1.1rem;
   padding-right: 2.25rem;
 }
+
+/*
+ * Pull to reload in the installed app (`pull-to-reload.tsx`). The component
+ * moves the badge (transform/opacity, once per frame) and sets `data-state`:
+ * idle → pulling ⇄ ready → reloading, or back through returning to idle.
+ */
+.pull-to-reload {
+  position: fixed;
+  top: env(safe-area-inset-top);
+  left: 50%;
+  z-index: 60;
+  margin-left: -1.25rem;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 200ms ease-out;
+}
+
+.pull-to-reload[data-state="idle"] {
+  visibility: hidden;
+}
+
+.pull-to-reload-badge {
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--color-white);
+  color: var(--color-neutral-700);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.2);
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+
+.pull-to-reload-pop,
+.pull-to-reload-icon {
+  display: block;
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.pull-to-reload-label {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  border-radius: 9999px;
+  background: var(--color-white);
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  color: var(--color-neutral-700);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.15);
+  opacity: 0;
+  transition: opacity 150ms;
+}
+
+/* Ready, and spinning after the release: the accent color and the label. */
+.pull-to-reload:is([data-state="ready"], [data-state="reloading"]) .pull-to-reload-badge {
+  background: #2563eb;
+  color: var(--color-white);
+}
+
+.pull-to-reload:is([data-state="ready"], [data-state="reloading"]) .pull-to-reload-label {
+  opacity: 1;
+}
+
+/* Springing back: the badge fades as it goes, so its shadow never lingers at the top edge. */
+.pull-to-reload[data-state="returning"] .pull-to-reload-badge {
+  transition: opacity 200ms ease-out;
+}
+
+.pull-to-reload[data-state="ready"] .pull-to-reload-pop {
+  animation: pull-to-reload-pop 200ms ease-out;
+}
+
+.pull-to-reload[data-state="reloading"] .pull-to-reload-icon {
+  animation: pull-to-reload-spin 0.8s linear infinite;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pull-to-reload-badge,
+  .pull-to-reload-label {
+    background: var(--color-neutral-800);
+    color: var(--color-neutral-100);
+  }
+
+  .pull-to-reload:is([data-state="ready"], [data-state="reloading"]) .pull-to-reload-badge {
+    background: #3b82f6;
+    color: var(--color-white);
+  }
+}
+
+@keyframes pull-to-reload-pop {
+  from {
+    transform: scale(1.1);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes pull-to-reload-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* No turning, popping or springing: the icon and the label just show. */
+@media (prefers-reduced-motion: reduce) {
+  .pull-to-reload,
+  .pull-to-reload-badge,
+  .pull-to-reload-label {
+    transition: none;
+  }
+
+  .pull-to-reload[data-state="ready"] .pull-to-reload-pop,
+  .pull-to-reload[data-state="reloading"] .pull-to-reload-icon {
+    animation: none;
+  }
+}

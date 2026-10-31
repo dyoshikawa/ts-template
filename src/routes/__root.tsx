@@ -3,6 +3,7 @@ import { type ReactNode, useEffect } from "react";
 
 import { Header } from "../components/header";
 import { NavigationProgress } from "../components/navigation-progress";
+import { PullToReload } from "../components/pull-to-reload";
 import { APP_NAME } from "../lib/app";
 import { getSession } from "../lib/auth-functions";
 import { listenForInstallOffers } from "../lib/install";
@@ -52,6 +53,7 @@ function RootComponent() {
   return (
     <RootDocument>
       <NavigationProgress />
+      <PullToReload />
       <Header session={session} />
       <Outlet />
     </RootDocument>

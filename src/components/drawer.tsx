@@ -103,6 +103,8 @@ export function Drawer({
       className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}
       aria-hidden={!open}
       inert={!open}
+      // A pull inside the open menu is not a pull to reload.
+      data-no-pull={open ? "" : undefined}
     >
       <button
         type="button"
