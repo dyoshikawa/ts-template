@@ -67,7 +67,7 @@ export function Header({ session }: { session: SessionData }) {
         </Link>
       )}
 
-      <Drawer open={menuOpen} title={APP_NAME} onClose={close}>
+      <Drawer open={menuOpen} title={APP_NAME} closeLabel="Close menu" onClose={close}>
         {session ? (
           <>
             <p className="truncate px-4 py-3 text-xs text-neutral-600 dark:text-neutral-400">
