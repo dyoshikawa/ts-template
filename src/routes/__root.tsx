@@ -5,6 +5,7 @@ import { Header } from "../components/header";
 import { APP_NAME } from "../lib/app";
 import { getSession } from "../lib/auth-functions";
 import { listenForInstallOffers } from "../lib/install";
+import { guardAgainstPageZoom } from "../lib/zoom-guard";
 
 import appCss from "../styles.css?url";
 
@@ -18,7 +19,12 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      {
+        // No pinch zoom anywhere; iOS ignores this, hence guardAgainstPageZoom too.
+        name: "viewport",
+        content:
+          "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+      },
       { title: APP_NAME },
       { name: "color-scheme", content: "light dark" },
       { name: "application-name", content: APP_NAME },
@@ -40,6 +46,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   const { session } = Route.useRouteContext();
   useServiceWorker();
+  useEffect(guardAgainstPageZoom, []);
 
   return (
     <RootDocument>
