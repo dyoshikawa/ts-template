@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import {
   turnstileBinding,
@@ -47,7 +47,7 @@ describe("turnstileConfig", () => {
     expect(turnstileConfig({ request: local })).toEqual({ ...TEST_KEYS, siteKey: "0xSITE" });
   });
 
-  it("falls back to the test keys under `vite dev`", () => {
+  it("falls back to the test keys under `vp dev`", () => {
     vi.stubEnv("DEV", true);
     expect(turnstileConfig({ request: deployed })).toEqual(TEST_KEYS);
   });

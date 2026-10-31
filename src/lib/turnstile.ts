@@ -5,7 +5,7 @@ import { isLocalRequest } from "./local-request";
 /**
  * Cloudflare's documented test keys: the widget always passes and the secret
  * always verifies. Stand-ins for an unconfigured key pair on local runs only
- * (`vite dev`, the emulator); a deployed Worker without its own keys fails
+ * (`vp dev`, the emulator); a deployed Worker without its own keys fails
  * closed instead of silently letting every challenge pass.
  * https://developers.cloudflare.com/turnstile/troubleshooting/testing/
  */

@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { isLocalRequest } from "./local-request";
 
 /**
- * Stand-in secret for local runs only (`vite dev`, the emulator without a
+ * Stand-in secret for local runs only (`vp dev`, the emulator without a
  * `.dev.vars` secret), where there is no `wrangler secret`.
  */
 const DEV_SECRET = "insecure-dev-only-secret-do-not-use-in-production";
@@ -31,7 +31,7 @@ const BETTER_AUTH_DEFAULT_SECRET = "better-auth-secret-12345678901234567890";
  * user. So the deployed Worker fails closed instead: without a configured
  * secret of at least {@link MIN_SECRET_LENGTH} characters (or with that very
  * default) this throws, and since the root route reads the session on every page load, every page
- * answers with a server error until the secret is set. Local runs (`vite dev`,
+ * answers with a server error until the secret is set. Local runs (`vp dev`,
  * requests to a local address) fall back to a fixed development secret.
  */
 export function resolveAuthSecret({ request }: { request: Request }): string {
