@@ -15,11 +15,22 @@ TODO: Describe what this project is and what it does.
 
 This repository starts from ts-template: a TanStack Start (React) app styled with Tailwind CSS v4
 and deployed to Cloudflare Workers, with passwordless email sign-in, an installable PWA and Web Push
-notifications. The UI is written in English.
+notifications. The UI speaks Japanese (the default) and English.
 
 - Every screen must work on a phone first: 44 px tap targets, 16 px inputs (`src/components/ui.ts`),
   and dark mode through `dark:` variants on every component.
   Never give a form control a text size under 16 px: iOS zooms into it on tap.
+- Every piece of user-facing text (labels, buttons, errors, `aria-label`s, page titles, emails)
+  comes from the catalogues: `src/i18n/ja.ts`, and `src/i18n/en.ts` typed against it, read through
+  `useI18n()` (`t.<area>.<key>`; text with values is a function). Never write a UI string in a
+  component. The language is resolved on the server (saved choice, `lang` cookie, then
+  `Accept-Language`); the server sends codes, not messages, and the page translates them. Format
+  dates and numbers with `Intl` in `locale` from `useI18n()`. e2e reads the Japanese text;
+  `e2e/i18n.spec.ts` checks the English screens.
+- The owner's UI rules hold on every screen (`e2e/ui-rules.spec.ts`): popups fill a phone's screen
+  (`Sheet`, `Drawer`), no pinch zoom, a spinner in the button for every wait on the server
+  (`BusyLabel`, never a full-screen block), one emoji per action (`BUTTON_EMOJI`), and pull to
+  reload in the installed app (`PullToReload`).
 - The Content-Security-Policy (`contentSecurityPolicy` in `src/lib/security-headers.ts`) allows
   scripts only with the per-response nonce. Never add `'unsafe-inline'` or `'unsafe-eval'` to
   `script-src`; a new third-party origin (images, frames, fetches) is added to its directive there.
