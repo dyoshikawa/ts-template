@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import { type InstallAction, installActionNow, installStore, promptInstall } from "../lib/install";
-import { secondaryButtonClass } from "./ui";
+import { Sheet } from "./sheet";
 
 type InstallWay = "ios" | "browser";
 
@@ -68,44 +68,22 @@ const GUIDES: Record<InstallWay, { title: string; steps: readonly string[] }> = 
   },
 };
 
-/** The way to install by hand, as a native dialog: Escape and its button close it. */
+/** The way to install by hand, in a sheet: Escape, the backdrop and its ✕ close it. */
 function InstallGuide({ way, onClose }: { way: InstallWay; onClose: () => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const element = dialog.current;
-    if (element !== null && !element.open) {
-      element.showModal();
-    }
-  }, []);
   const guide = GUIDES[way];
   return (
-    <dialog
-      ref={dialog}
-      aria-labelledby="install-guide-title"
-      onClose={onClose}
-      className="m-auto max-w-md rounded-2xl bg-white p-5 text-neutral-900 shadow-xl backdrop:bg-black/50 dark:bg-neutral-900 dark:text-neutral-100"
-    >
-      <h2 id="install-guide-title" className="mb-3 text-lg font-bold">
-        {guide.title}
-      </h2>
+    <Sheet title={guide.title} closeLabel="Close" onClose={onClose}>
       <ol className="mb-3 list-decimal space-y-2 pl-5 text-sm">
         {guide.steps.map((step) => (
           <li key={step}>{step}</li>
         ))}
       </ol>
       {way === "ios" ? (
-        <p className="mb-3 text-xs text-neutral-600 dark:text-neutral-400">
+        <p className="text-xs text-neutral-600 dark:text-neutral-400">
           The Home Screen app does not share Safari&apos;s sign-in, so sign in once more the first
           time you open it.
         </p>
       ) : null}
-      <button
-        type="button"
-        className={`${secondaryButtonClass} w-full`}
-        onClick={() => dialog.current?.close()}
-      >
-        Close
-      </button>
-    </dialog>
+    </Sheet>
   );
 }
