@@ -8,6 +8,7 @@ import { disableNotifications } from "../lib/push-client";
 import { Drawer } from "./drawer";
 import { InstallButton } from "./install-button";
 import { Logo } from "./logo";
+import { BusyLabel } from "./spinner";
 
 const menuLinkClass =
   "flex min-h-12 items-center gap-3 px-4 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800";
@@ -15,12 +16,15 @@ const menuLinkClass =
 export function Header({ session }: { session: SessionData }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const close = () => {
     setMenuOpen(false);
   };
 
+  // The menu stays open with a spinner on the button until the session has
+  // ended, so the user sees the sign-out happening.
   const signOut = async () => {
-    close();
+    setSigningOut(true);
     // Fetched first, so a failed fetch does not leave notifications switched
     // off while the session goes on; without the client, sign out through
     // the endpoint it would call.
@@ -34,6 +38,8 @@ export function Header({ session }: { session: SessionData }) {
       await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => {});
     }
     await router.invalidate();
+    setSigningOut(false);
+    close();
   };
 
   return (
@@ -81,8 +87,13 @@ export function Header({ session }: { session: SessionData }) {
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
             <div className="mt-auto border-t border-neutral-200 dark:border-neutral-800">
-              <button type="button" onClick={signOut} className={`${menuLinkClass} w-full`}>
-                Sign out
+              <button
+                type="button"
+                disabled={signingOut}
+                onClick={signOut}
+                className={`${menuLinkClass} w-full disabled:opacity-50`}
+              >
+                <BusyLabel busy={signingOut}>Sign out</BusyLabel>
               </button>
             </div>
           </>

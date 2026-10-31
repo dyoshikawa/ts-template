@@ -2,6 +2,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { type ReactNode, useEffect } from "react";
 
 import { Header } from "../components/header";
+import { NavigationProgress } from "../components/navigation-progress";
 import { APP_NAME } from "../lib/app";
 import { getSession } from "../lib/auth-functions";
 import { listenForInstallOffers } from "../lib/install";
@@ -50,6 +51,7 @@ function RootComponent() {
 
   return (
     <RootDocument>
+      <NavigationProgress />
       <Header session={session} />
       <Outlet />
     </RootDocument>

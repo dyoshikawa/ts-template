@@ -2,6 +2,7 @@ import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/rea
 import { type FormEvent, useEffect, useState } from "react";
 
 import { NotificationSettings } from "../components/notification-settings";
+import { BusyLabel } from "../components/spinner";
 import { Turnstile } from "../components/turnstile";
 import { dangerButtonClass, secondaryButtonClass } from "../components/ui";
 import { deleteAccount, getTurnstileConfig, listPasskeys } from "../lib/account-functions";
@@ -98,7 +99,7 @@ function AccountPage() {
             disabled={!understood || !token || pending}
             className={dangerButtonClass}
           >
-            {pending ? "Deleting…" : "Close account and delete all data"}
+            <BusyLabel busy={pending}>Close account and delete all data</BusyLabel>
           </button>
         </form>
         {error ? (
@@ -137,7 +138,12 @@ function formatPasskeyDate(date: Date): string {
  */
 function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd: boolean }) {
   const router = useRouter();
-  const [pending, setPending] = useState(false);
+  // What is on its way: adding, or deleting the passkey with this id. Its
+  // button shows a spinner; every passkey button waits until it settles.
+  const [busy, setBusy] = useState<{ action: "add" } | { action: "delete"; id: string } | null>(
+    null,
+  );
+  const pending = busy !== null;
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const supported = usePasskeysSupported();
 
@@ -149,7 +155,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
   }, [canAdd, supported]);
 
   const add = async () => {
-    setPending(true);
+    setBusy({ action: "add" });
     setStatus(null);
     const result = await addPasskey();
     if (result.status === "ok") {
@@ -158,7 +164,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
     } else if (result.status === "failed") {
       setStatus({ ok: false, text: result.message });
     }
-    setPending(false);
+    setBusy(null);
   };
 
   const remove = async (passkey: PasskeyRow) => {
@@ -166,7 +172,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
     if (!window.confirm(`Delete "${label}"? You will no longer be able to sign in with it.`)) {
       return;
     }
-    setPending(true);
+    setBusy({ action: "delete", id: passkey.id });
     setStatus(null);
     const authClient = await loadAuthClient();
     const { error } = authClient
@@ -178,7 +184,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
       await router.invalidate();
       setStatus({ ok: true, text: `Deleted "${label}".` });
     }
-    setPending(false);
+    setBusy(null);
   };
 
   return (
@@ -209,7 +215,9 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
                   void remove(passkey);
                 }}
               >
-                Delete
+                <BusyLabel busy={busy?.action === "delete" && busy.id === passkey.id}>
+                  Delete
+                </BusyLabel>
               </button>
             </li>
           ))}
@@ -230,7 +238,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
             void add();
           }}
         >
-          {pending ? "Working…" : "🔑 Add a passkey on this device"}
+          <BusyLabel busy={busy?.action === "add"}>🔑 Add a passkey on this device</BusyLabel>
         </button>
       ) : (
         <p className="text-sm text-neutral-600 dark:text-neutral-400">

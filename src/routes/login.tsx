@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
 
+import { BusyLabel } from "../components/spinner";
 import { Turnstile } from "../components/turnstile";
 import {
   inputClass,
@@ -44,7 +45,10 @@ function LoginPage() {
   const { turnstile, passkeys: passkeysOffered } = Route.useLoaderData();
   const [step, setStep] = useState<Step>({ name: "email" });
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  // The request on its way, if any: its button shows a spinner, and every
+  // button waits until it settles.
+  const [busy, setBusy] = useState<"send" | "verify" | "passkey" | null>(null);
+  const pending = busy !== null;
   const supported = usePasskeysSupported();
   const passkeys = passkeysOffered && supported;
   // Sending a code needs a passed Turnstile challenge; entering it does not.
@@ -58,7 +62,7 @@ function LoginPage() {
       setError("Wait a moment for the check to finish.");
       return;
     }
-    setPending(true);
+    setBusy("send");
     setError(null);
     const { error: sendError } = await authClient.emailOtp.sendVerificationOtp(
       { email, type: "sign-in" },
@@ -66,7 +70,7 @@ function LoginPage() {
     );
     setCaptcha(null);
     setCaptchaRound((round) => round + 1);
-    setPending(false);
+    setBusy(null);
     if (sendError) {
       setError(sendError.message ?? "Could not send the code. Please try again.");
       return;
@@ -79,11 +83,11 @@ function LoginPage() {
   );
 
   const verifyCode = async ({ email, otp }: { email: string; otp: string }) => {
-    setPending(true);
+    setBusy("verify");
     setError(null);
     const { error: verifyError } = await authClient.signIn.emailOtp({ email, otp });
-    setPending(false);
     if (verifyError) {
+      setBusy(null);
       setError(verifyError.message ?? "That code is not right. Please try again.");
       return;
     }
@@ -113,7 +117,7 @@ function LoginPage() {
     // a failed press, and would otherwise wipe that failure's message.
     if (!autoFill) {
       buttonInFlight.current = true;
-      setPending(true);
+      setBusy("passkey");
       setError(null);
     }
     const { error: passkeyError } = await authClient.signIn.passkey({ autoFill });
@@ -122,7 +126,7 @@ function LoginPage() {
     }
     if (passkeyError) {
       if (!autoFill) {
-        setPending(false);
+        setBusy(null);
       }
       const message = passkeySignInErrorMessage(passkeyError);
       if (message) {
@@ -172,6 +176,7 @@ function LoginPage() {
         <>
           <EmailForm
             pending={pending}
+            sending={busy === "send"}
             ready={captcha !== null}
             passkeys={passkeys}
             challenge={challenge}
@@ -187,7 +192,7 @@ function LoginPage() {
                 }}
                 className={secondaryButtonClass}
               >
-                🔑 Sign in with a passkey
+                <BusyLabel busy={busy === "passkey"}>🔑 Sign in with a passkey</BusyLabel>
               </button>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 Add a passkey from your account page after signing in with your email address.
@@ -199,6 +204,7 @@ function LoginPage() {
         <OtpForm
           email={step.email}
           pending={pending}
+          checking={busy === "verify"}
           onSubmit={verifyCode}
           onChangeEmail={() => {
             setError(null);
@@ -217,12 +223,15 @@ function LoginPage() {
 
 function EmailForm({
   pending,
+  sending,
   ready,
   passkeys,
   challenge,
   onSubmit,
 }: {
   pending: boolean;
+  /** Sending the code is the request on its way. */
+  sending: boolean;
   /** True once the Turnstile challenge has passed. */
   ready: boolean;
   /** Whether the field also offers the browser's saved passkeys. */
@@ -258,7 +267,7 @@ function EmailForm({
       </label>
       {challenge}
       <button type="submit" disabled={pending || !ready} className={primaryButtonClass}>
-        {pending ? "Sending…" : "Send code"}
+        <BusyLabel busy={sending}>Send code</BusyLabel>
       </button>
       <p className="text-xs text-neutral-500 dark:text-neutral-400">
         New here? Signing in creates your account.
@@ -274,11 +283,14 @@ function EmailForm({
 function OtpForm({
   email,
   pending,
+  checking,
   onSubmit,
   onChangeEmail,
 }: {
   email: string;
   pending: boolean;
+  /** Checking the code is the request on its way. */
+  checking: boolean;
   onSubmit: (params: { email: string; otp: string }) => void;
   /** Back to the email step, to send a code again or to another address. */
   onChangeEmail: () => void;
@@ -320,7 +332,7 @@ function OtpForm({
         disabled={pending || otp.length !== OTP_LENGTH}
         className={primaryButtonClass}
       >
-        {pending ? "Checking…" : "Sign in"}
+        <BusyLabel busy={checking}>Sign in</BusyLabel>
       </button>
       <p className="text-xs text-neutral-500 dark:text-neutral-400">
         No code, or the wrong address? Go back to the email step to send a new one.

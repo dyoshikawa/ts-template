@@ -9,6 +9,7 @@ import {
   showPasskeyOffer,
   usePasskeyOfferPending,
 } from "../lib/passkey-browser";
+import { BusyLabel } from "./spinner";
 import { primaryButtonClass, secondaryButtonClass } from "./ui";
 
 type OfferState =
@@ -99,7 +100,7 @@ export function PasskeyOffer() {
                 void register();
               }}
             >
-              {state.name === "pending" ? "Adding…" : "Add a passkey"}
+              <BusyLabel busy={state.name === "pending"}>Add a passkey</BusyLabel>
             </button>
             <button
               type="button"

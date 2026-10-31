@@ -8,7 +8,11 @@ import {
   resyncSubscription,
 } from "../lib/push-client";
 import { sendTestNotification } from "../lib/push-functions";
+import { BusyLabel } from "./spinner";
 import { primaryButtonClass, secondaryButtonClass } from "./ui";
+
+/** The buttons that wait on the server or the browser's push service. */
+type Action = "on" | "off" | "test";
 
 type State =
   | { name: "checking" }
@@ -31,7 +35,8 @@ const BLOCKED_MESSAGES: Record<Exclude<PushSupport, "ready">, string> = {
  */
 export function NotificationSettings({ vapidPublicKey }: { vapidPublicKey: string }) {
   const [state, setState] = useState<State>({ name: "checking" });
-  const [pending, setPending] = useState(false);
+  // The action on its way: its button shows a spinner, every button waits.
+  const [busy, setBusy] = useState<Action | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,32 +66,32 @@ export function NotificationSettings({ vapidPublicKey }: { vapidPublicKey: strin
     };
   }, [vapidPublicKey]);
 
-  const run = async (action: () => Promise<void>) => {
-    setPending(true);
+  const run = async (name: Action, action: () => Promise<void>) => {
+    setBusy(name);
     setMessage(null);
     try {
       await action();
     } catch {
       setMessage("Something went wrong. Reload the page and try again.");
     } finally {
-      setPending(false);
+      setBusy(null);
     }
   };
 
   const turnOn = () =>
-    run(async () => {
+    run("on", async () => {
       const result = await enableNotifications(vapidPublicKey);
       setState(result === "enabled" ? { name: "on" } : { name: "denied" });
     });
 
   const turnOff = () =>
-    run(async () => {
+    run("off", async () => {
       await disableNotifications();
       setState({ name: "off" });
     });
 
   const sendTest = () =>
-    run(async () => {
+    run("test", async () => {
       const result = await sendTestNotification();
       if (!result.ok) {
         setMessage("Too many test notifications. Wait a minute and try again.");
@@ -106,7 +111,7 @@ export function NotificationSettings({ vapidPublicKey }: { vapidPublicKey: strin
       </h2>
       <NotificationBody
         state={vapidPublicKey === "" ? null : state}
-        pending={pending}
+        busy={busy}
         onTurnOn={turnOn}
         onTurnOff={turnOff}
         onSendTest={sendTest}
@@ -122,14 +127,14 @@ const noteClass = "text-sm text-neutral-600 dark:text-neutral-400";
 
 function NotificationBody({
   state,
-  pending,
+  busy,
   onTurnOn,
   onTurnOff,
   onSendTest,
 }: {
   /** `null` when the server has push notifications switched off. */
   state: State | null;
-  pending: boolean;
+  busy: Action | null;
   onTurnOn: () => void;
   onTurnOff: () => void;
   onSendTest: () => void;
@@ -158,11 +163,11 @@ function NotificationBody({
           <p className={noteClass}>Get notified on this device.</p>
           <button
             type="button"
-            disabled={pending}
+            disabled={busy !== null}
             onClick={onTurnOn}
             className={primaryButtonClass}
           >
-            {pending ? "Turning on…" : "Turn on notifications"}
+            <BusyLabel busy={busy === "on"}>Turn on notifications</BusyLabel>
           </button>
         </>
       );
@@ -173,19 +178,19 @@ function NotificationBody({
           <p className={noteClass}>Notifications are on for this device.</p>
           <button
             type="button"
-            disabled={pending}
+            disabled={busy !== null}
             onClick={onSendTest}
             className={secondaryButtonClass}
           >
-            Send a test notification
+            <BusyLabel busy={busy === "test"}>Send a test notification</BusyLabel>
           </button>
           <button
             type="button"
-            disabled={pending}
+            disabled={busy !== null}
             onClick={onTurnOff}
             className={secondaryButtonClass}
           >
-            Turn off notifications
+            <BusyLabel busy={busy === "off"}>Turn off notifications</BusyLabel>
           </button>
         </>
       );

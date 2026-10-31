@@ -1,6 +1,6 @@
 import { type Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import { expect, signIn, test } from "./fixtures";
 
 // The owner's UI rules: no pinch zoom, full-height popups on phones, local
 // loading indicators and pull to reload in the installed app.
@@ -109,4 +109,91 @@ test("the menu fills a phone's screen and closes on ✕, Escape and a swipe back
   await openMenu.click();
   await expect.poll(async () => (await menu.boundingBox())?.x).toBe(0);
   expect((await menu.boundingBox())?.width).toBeLessThan(768 / 2);
+});
+
+/** Holds every request matching `match` back by `ms`, so its wait can be seen. */
+async function delay(page: Page, match: (url: URL) => boolean, ms = 1500): Promise<void> {
+  await page.route(match, async (route) => {
+    await new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+    await route.continue();
+  });
+}
+
+/** Whether anything fixed covers most of the screen (a blocking overlay). */
+function screenIsBlocked(page: Page): Promise<boolean> {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("body *")].some((element) => {
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      return (
+        style.position === "fixed" &&
+        style.visibility !== "hidden" &&
+        style.pointerEvents !== "none" &&
+        box.width * box.height > innerWidth * innerHeight * 0.5
+      );
+    }),
+  );
+}
+
+test("a button waiting on the server spins in place and blocks nothing", async ({
+  page,
+  email,
+}) => {
+  await page.goto("/login");
+  await delay(page, (url) => url.pathname.endsWith("/email-otp/send-verification-otp"));
+  await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  const send = page.getByRole("button", { name: "Send code" });
+  await send.click();
+  await expect(send).toBeDisabled();
+  await expect(send.locator("[data-spinner]")).toBeVisible();
+  expect(await screenIsBlocked(page)).toBe(false);
+  await expect(page.getByRole("textbox", { name: "Sign-in code" })).toBeVisible();
+});
+
+test("a failed request clears the spinner and says so where the user acted", async ({
+  page,
+  email,
+}) => {
+  await page.goto("/login");
+  await page.route(
+    (url) => url.pathname.endsWith("/email-otp/send-verification-otp"),
+    (route) => route.fulfill({ status: 500, json: { message: "boom" } }),
+  );
+  await page.getByRole("textbox", { name: "Email address" }).fill(email);
+  const send = page.getByRole("button", { name: "Send code" });
+  await send.click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(send.locator("[data-spinner]")).toHaveCount(0);
+});
+
+test("a slow page load shows a bar along the top and blocks nothing", async ({ page }) => {
+  await page.goto("/");
+  const signInLink = page.getByRole("main").getByRole("link", { name: "Sign in" });
+  await expect(signInLink).toBeVisible();
+  // Every navigation asks the server for the session first: hold those back.
+  await delay(page, (url) => url.pathname.startsWith("/_serverFn"));
+  await signInLink.click();
+  const bar = page.getByTestId("navigation-progress");
+  await expect(bar).toBeVisible();
+  expect((await bar.boundingBox())?.height).toBeLessThan(8);
+  expect(await screenIsBlocked(page)).toBe(false);
+  await page.waitForURL("/login");
+  await expect(bar).toHaveCount(0);
+});
+
+test("signing out keeps the menu open with a spinner until the session is gone", async ({
+  page,
+  email,
+}) => {
+  await signIn({ page, email });
+  await delay(page, (url) => url.pathname.endsWith("/api/auth/sign-out"));
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  const signOut = page.getByRole("button", { name: "Sign out", exact: true });
+  await signOut.click();
+  await expect(signOut).toBeDisabled();
+  await expect(signOut.locator("[data-spinner]")).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "ts-template" })).toBeHidden();
+  await expect(page.getByRole("link", { name: email })).toHaveCount(0);
 });
