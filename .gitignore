@@ -252,3 +252,6 @@ rulesync.local.jsonc
 
 # Vitest cache written by `vp test`
 .vitest/
+
+# cf CLI build output
+.cloudflare/

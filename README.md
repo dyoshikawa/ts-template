@@ -99,7 +99,7 @@ Then rename the project:
 
 1. `package.json` — `name`, `description`, `keywords`, `homepage`, `bugs`, `repository`
 2. `src/lib/app.ts` — `APP_NAME`
-3. `wrangler.jsonc` — `name`, `database_name`, and the `vars` (`wrangler.example.jsonc` shows a filled-in one;
+3. `wrangler.jsonc` and `cloudflare.config.ts` — `name`, `database_name` (the `DB` binding's `name` in `cloudflare.config.ts`), and the `vars` (`wrangler.example.jsonc` shows a filled-in one;
    `PASSKEY_RP_ID` stays empty until the app has a custom domain)
 4. `public/manifest.webmanifest`, `public/offline.html`, `public/sw.js` — the name, colors and cache names
 5. `scripts/generate-icons.mjs` and `src/components/logo.tsx` — the icon; run `pnpm icons`
@@ -112,6 +112,11 @@ Then rename the project:
 
 `wrangler.example.jsonc` shows `wrangler.jsonc` filled in for production (custom domain, sender,
 Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does not read it.
+`cloudflare.config.ts` describes the same Worker for Cloudflare's `cf` CLI (`pnpm cf:dry-run`):
+mirror every change to `wrangler.jsonc` there (`domains` for the custom domain, `bindings.text` for the
+vars, the D1 `id`). Deploys still run on wrangler, as `cf deploy` 1.0.0-beta.5 drops the
+Worker's secrets. `@cloudflare/vite-plugin` stays at 1.64.0 (Dependabot ignores newer releases):
+1.65.0 dropped the support for `cloudflare.config.ts` that `cf` builds through.
 
 1. Create the database and put its id in `wrangler.jsonc` (`database_id`):
    `pnpm exec wrangler d1 create ts-template`, then `pnpm db:migrate:remote`.
