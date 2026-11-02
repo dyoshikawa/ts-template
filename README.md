@@ -99,7 +99,7 @@ Then rename the project:
 
 1. `package.json` — `name`, `description`, `keywords`, `homepage`, `bugs`, `repository`
 2. `src/lib/app.ts` — `APP_NAME`
-3. `wrangler.jsonc` and `cloudflare.config.ts` — `name`, `database_name`, and the `vars` (`wrangler.example.jsonc` shows a filled-in one;
+3. `wrangler.jsonc` and `cloudflare.config.ts` — `name`, `database_name` (the `DB` binding's `name` in `cloudflare.config.ts`), and the `vars` (`wrangler.example.jsonc` shows a filled-in one;
    `PASSKEY_RP_ID` stays empty until the app has a custom domain)
 4. `public/manifest.webmanifest`, `public/offline.html`, `public/sw.js` — the name, colors and cache names
 5. `scripts/generate-icons.mjs` and `src/components/logo.tsx` — the icon; run `pnpm icons`

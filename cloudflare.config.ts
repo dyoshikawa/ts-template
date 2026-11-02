@@ -6,7 +6,8 @@ import { bindings, defineConfig, triggers } from "cf/config";
 // on wrangler (local dev, the browser tests, D1 migrations, `wrangler types`).
 // Change a binding in both files.
 // `@cloudflare/vite-plugin` is held at 1.64.0: 1.65.0 dropped the support for
-// this file and the Build Output `cf deploy` reads.
+// this file and the Build Output `cf deploy` reads (upstream moved it to the v2
+// plugin, still in beta). D1 migrations (`drizzle/`) also stay on wrangler.
 // Secrets are set with `wrangler secret put`; they are not declared here
 // because `bindings.secret()` makes every one required.
 export default defineConfig({
