@@ -2,7 +2,13 @@
 // them; declare them here on top of the generated `Env`.
 declare namespace Cloudflare {
   interface Env {
-    /** Signs session cookies. Required in production. */
+    /**
+     * Signs session cookies; at least 32 characters (`openssl rand -base64 48`).
+     * Required on the deployed Worker, which answers every page with a server
+     * error without it; local runs fall back to a fixed development secret.
+     * Do not set Better Auth's `BETTER_AUTH_SECRETS` rotation list instead:
+     * it would take precedence over this secret and skip the length check.
+     */
     BETTER_AUTH_SECRET?: string;
     /**
      * Comma-separated addresses allowed to sign in; unset lets anybody in.
@@ -14,7 +20,10 @@ declare namespace Cloudflare {
      * signed with; unset switches push notifications off.
      */
     VAPID_PRIVATE_KEY?: string;
-    /** Turnstile secret matching `TURNSTILE_SITE_KEY`; unset means the test keys. */
+    /**
+     * Turnstile secret matching `TURNSTILE_SITE_KEY`. Unset, local runs use
+     * the test keys and a deployed Worker refuses every token.
+     */
     TURNSTILE_SECRET_KEY?: string;
     /**
      * `1` switches Turnstile off: no widget, every token verifies. Local runs

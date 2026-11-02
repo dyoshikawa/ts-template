@@ -250,6 +250,8 @@ rulesync.local.jsonc
 /test-results/
 /playwright-report/
 
+# Vitest cache written by `vp test`
+.vitest/
 
 # cf CLI build output
 .cloudflare/

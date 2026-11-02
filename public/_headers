@@ -1,0 +1,8 @@
+# Caching for the static files (Workers static assets read this file).
+# Vite's bundles carry a hash of their content in their name: cached for good,
+# so a browser does not ask again for each of them on every page it opens.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+# The service worker itself is always checked for a newer one.
+/sw.js
+  Cache-Control: no-cache

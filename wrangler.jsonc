@@ -11,6 +11,11 @@
   // `workers_dev` stays true.
   // "routes": [{ "pattern": "app.example.com", "custom_domain": true }],
   // "workers_dev": true,
+  // Nightly at 03:30 UTC: deletes expired sign-in codes and passkey
+  // challenges (`scheduled` in src/server.ts).
+  "triggers": {
+    "crons": ["30 3 * * *"]
+  },
   "observability": {
     "enabled": true
   },
@@ -20,15 +25,22 @@
     "EMAIL_FROM": "no-reply@example.com",
     // Public site key of the Cloudflare Turnstile widget that guards the
     // sign-in mailer and account deletion (Dashboard → Turnstile). Pair it
-    // with the TURNSTILE_SECRET_KEY secret. Leave it empty to use Cloudflare's
-    // always-passing test keys.
+    // with the TURNSTILE_SECRET_KEY secret. Left empty, local runs use
+    // Cloudflare's always-passing test keys; the deployed Worker refuses
+    // sign-in and account deletion until a real pair is set.
     "TURNSTILE_SITE_KEY": "",
     // Public half of the VAPID key pair push notifications are signed with
     // (`pnpm vapid` prints a pair). Pair it with the VAPID_PRIVATE_KEY
     // secret. Leave it empty to switch push notifications off.
     "VAPID_PUBLIC_KEY": "",
     // Who push services contact about this sender: a `mailto:` or `https:` URL.
-    "VAPID_SUBJECT": "mailto:admin@example.com"
+    "VAPID_SUBJECT": "mailto:admin@example.com",
+    // The one hostname that offers passkeys: your custom domain (the `routes`
+    // pattern above), e.g. "app.example.com". A passkey is bound to one
+    // domain, so the workers.dev address and any other host sign in by email
+    // alone. Leave it empty to switch passkeys off on the deployed Worker;
+    // local runs on localhost:4173 / :5173 always offer them.
+    "PASSKEY_RP_ID": ""
   },
   "d1_databases": [
     {

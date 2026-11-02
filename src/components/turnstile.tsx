@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
 
+import { useI18n } from "../i18n/i18n-context";
+import { type Language } from "../i18n/language";
+import type { TurnstileAction, TurnstileClientConfig } from "../lib/turnstile";
+
 const SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
 type TurnstileApi = {
@@ -7,11 +11,13 @@ type TurnstileApi = {
     container: HTMLElement,
     options: {
       sitekey: string;
+      action: TurnstileAction;
       callback: (token: string) => void;
       "expired-callback": () => void;
       "error-callback": () => void;
       theme: "auto";
       size: "flexible";
+      language: Language;
     },
   ) => string;
   remove: (widgetId: string) => void;
@@ -56,17 +62,24 @@ const DISABLED_TOKEN = "turnstile-disabled";
 /**
  * A Cloudflare Turnstile widget. `onToken` receives a token once the
  * challenge passes and `null` when it expires or fails, so the caller can
- * enable and disable the action it guards. With an empty `siteKey`
- * (Turnstile disabled on the server) nothing is rendered and a placeholder
- * token is handed out at once.
+ * enable and disable the action it guards. While Turnstile is disabled on the
+ * server (a local run) nothing is rendered and a placeholder token is handed
+ * out at once; on a server without a key pair no token is ever handed out and
+ * a notice says the action is unavailable. `action` names what the token is
+ * for; the server refuses it for anything else.
  */
 export function Turnstile({
-  siteKey,
+  config,
+  action,
   onToken,
 }: {
-  siteKey: string;
+  config: TurnstileClientConfig;
+  action: TurnstileAction;
   onToken: (token: string | null) => void;
 }) {
+  const { t, language } = useI18n();
+  const siteKey = config.status === "enabled" ? config.siteKey : "";
+  const { status } = config;
   const container = useRef<HTMLDivElement>(null);
   const latestOnToken = useRef(onToken);
 
@@ -75,8 +88,12 @@ export function Turnstile({
   }, [onToken]);
 
   useEffect(() => {
-    if (siteKey === "") {
+    if (status === "disabled") {
       latestOnToken.current(DISABLED_TOKEN);
+      return;
+    }
+    if (status === "unconfigured") {
+      latestOnToken.current(null);
       return;
     }
     let widgetId: string | null = null;
@@ -88,6 +105,7 @@ export function Turnstile({
         }
         widgetId = turnstile.render(container.current, {
           sitekey: siteKey,
+          action,
           callback: (token) => {
             latestOnToken.current(token);
           },
@@ -99,6 +117,8 @@ export function Turnstile({
           },
           theme: "auto",
           size: "flexible",
+          // The widget's own text, in the page's language.
+          language,
         });
       })
       .catch(() => {
@@ -110,10 +130,17 @@ export function Turnstile({
         window.turnstile?.remove(widgetId);
       }
     };
-  }, [siteKey]);
+  }, [status, siteKey, action, language]);
 
-  if (siteKey === "") {
+  if (status === "disabled") {
     return null;
+  }
+  if (status === "unconfigured") {
+    return (
+      <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        {t.turnstile.unavailable}
+      </p>
+    );
   }
   return <div ref={container} className="min-h-16" />;
 }

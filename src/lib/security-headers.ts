@@ -60,7 +60,7 @@ export function createNonce(): string {
 /**
  * The response with the security headers added (a copy: streamed responses
  * have frozen headers). With a `nonce` the Content-Security-Policy is set too;
- * without one (`vite dev`, whose inline scripts carry no nonce) only
+ * without one (`vp dev`, whose inline scripts carry no nonce) only
  * `frame-ancestors` is.
  */
 export function withSecurityHeaders(response: Response, { nonce }: { nonce?: string } = {}) {

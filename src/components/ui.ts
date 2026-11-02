@@ -12,6 +12,27 @@ export const secondaryButtonClass =
 
 export const linkButtonClass = "min-h-11 px-2 text-sm underline disabled:opacity-50";
 
+/**
+ * The emoji in front of each action's label, one per action across the app
+ * (the same action always gets the same one). Shown through `BusyLabel` or
+ * `Emoji`, hidden from screen readers so the label alone names the button.
+ */
+export const BUTTON_EMOJI = {
+  home: "🏠",
+  account: "👤",
+  signIn: "🔓",
+  signOut: "🚪",
+  sendCode: "📧",
+  passkey: "🔑",
+  install: "📲",
+  notificationsOn: "🔔",
+  notificationsOff: "🔕",
+  testNotification: "📨",
+  delete: "🗑️",
+  retry: "🔄",
+  language: "🌐",
+} as const;
+
 /** For actions that destroy data, e.g. closing the account. */
 export const dangerButtonClass =
   "min-h-11 rounded-lg bg-red-700 px-4 py-2 text-base font-medium text-white hover:bg-red-800 dark:bg-red-500 dark:text-neutral-950 dark:hover:bg-red-400 disabled:opacity-50";

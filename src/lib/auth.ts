@@ -1,42 +1,96 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import type { BetterAuthPlugin } from "better-auth";
+import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "better-auth/api";
+// The minimal build leaves out Kysely and its schema migrator: the Drizzle
+// adapter talks to D1 itself and Drizzle Kit writes the migrations, so
+// neither is ever used, and the Worker no longer evaluates them on a cold
+// start.
+import { betterAuth } from "better-auth/minimal";
 import { captcha, emailOTP } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 
 import { createDb } from "../db/client";
+import { type Language, requestLanguage } from "../i18n/language";
 import { APP_NAME } from "./app";
+import {
+  AUTHORITATIVE_SESSION_PATHS,
+  CAPTCHA_PATHS,
+  DISABLED_AUTH_PATHS,
+  guardAuthRequest,
+  VERIFY_PASSKEY_REGISTRATION_PATH,
+} from "./auth-guard";
+import { resolveAuthSecret } from "./auth-secret";
 import { isLocalRequest } from "./local-request";
-import { buildOtpEmail } from "./otp-email";
-import { isEmailAllowed } from "./sign-in-allowlist";
-import { turnstileDisabled, turnstileSecretKey } from "./turnstile";
+import { OTP_LENGTH } from "./otp-code";
+import { buildOtpEmail, type OtpEmail } from "./otp-email";
+import { buildPasskeyAddedEmail } from "./passkey-email";
+import { PASSKEY_LABEL } from "./passkey-name";
+import { turnstileBinding, turnstileConfig } from "./turnstile";
 
-const OTP_LENGTH = 6;
 const OTP_EXPIRES_IN_SECONDS = 10 * 60;
 // Signing in means fetching a code from the mailbox, so a session is kept
 // for a long time and slid forward once a day while the user keeps coming back.
 const SESSION_EXPIRES_IN_SECONDS = 90 * 24 * 60 * 60;
 const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
-const SIGN_IN_PATHS = new Set(["/email-otp/send-verification-otp", "/sign-in/email-otp"]);
 
-// Only ever used by `vite dev`, where there is no `wrangler secret`.
-const DEV_SECRET = "insecure-dev-only-secret-do-not-use-in-production";
+/**
+ * Cookie names for an `https` origin carry the `__Host-` prefix, which the
+ * browser accepts only with `Secure`, `Path=/` and no `Domain`: a sibling host
+ * under the same parent domain cannot plant a session cookie that the app
+ * would read in place of the user's own. Plain `http` (local runs) keeps the
+ * default names, since such cookies must be `Secure`.
+ */
+function cookieAdvanced({ request }: { request: Request }) {
+  if (new URL(request.url).protocol !== "https:") {
+    return {};
+  }
+  return {
+    useSecureCookies: false,
+    cookiePrefix: "__Host-better-auth",
+    defaultCookieAttributes: { secure: true },
+  };
+}
 
 /**
  * Builds a Better Auth instance for one request. Bindings (D1, Email Service)
  * are only reachable through `env`, and the base URL is taken from the request
- * so the same code serves `vite dev` and every deployed hostname.
+ * so the same code serves `vp dev` and every deployed hostname.
  *
- * Sign-in is passwordless: the user enters an email address, receives a
- * 6-digit one-time code, and enters that code. First-time addresses are
+ * Sign-in is passwordless: the user enters an email address, receives an
+ * 8-digit one-time code, and enters that code. First-time addresses are
  * registered on the spot — unless `ALLOWED_EMAILS` restricts who may sign in.
+ * A signed-in user can then add passkeys and sign in with one instead (on
+ * the hosts `passkeyConfig` allows); the email code always keeps working.
+ *
+ * The passkey plugin (`passkeys`, from `passkeyPlugins` in ./auth-passkey.ts)
+ * is passed only by the auth endpoints (`/api/auth/*`), which serve the
+ * passkey routes. Reading the session needs none of it, and leaving it out
+ * keeps its WebAuthn and X.509 libraries (about a third of the auth code) off
+ * the Worker's cold start for every page and server function.
  */
-export function createAuth({ request }: { request: Request }) {
+export function createAuth({
+  request,
+  passkeys = [],
+}: {
+  request: Request;
+  passkeys?: BetterAuthPlugin[];
+}) {
+  // Throws on a deployed Worker without a usable secret (see `resolveAuthSecret`).
+  const secret = resolveAuthSecret({ request });
+  const turnstile = turnstileConfig({ request });
+  const binding = turnstileBinding({ request });
   return betterAuth({
     baseURL: new URL(request.url).origin,
-    secret: env.BETTER_AUTH_SECRET ?? (import.meta.env.DEV ? DEV_SECRET : undefined),
+    secret,
+    disabledPaths: DISABLED_AUTH_PATHS,
     database: drizzleAdapter(createDb({ d1: env.DB }), { provider: "sqlite" }),
+    user: {
+      additionalFields: {
+        // Written by `setLanguagePreference` only.
+        language: { type: "string", required: false, input: false },
+      },
+    },
     session: {
       expiresIn: SESSION_EXPIRES_IN_SECONDS,
       updateAge: SESSION_UPDATE_AGE_SECONDS,
@@ -53,57 +107,110 @@ export function createAuth({ request }: { request: Request }) {
       // the same tally; off for local runs so browser tests can sign in freely.
       enabled: !isLocalRequest(request),
       storage: "database",
+      // Passkey sign-in needs no Turnstile, and every challenge it hands out
+      // is a D1 write, so it gets a tighter limit than the default 100 per
+      // 10 s. The sign-in page asks for one challenge per visit (the email
+      // field's autofill) and one per press of the passkey button.
+      customRules: {
+        "/passkey/generate-authenticate-options": { window: 60, max: 20 },
+        "/passkey/verify-authentication": { window: 60, max: 10 },
+      },
     },
     advanced: {
       // The client address Cloudflare stamps on every request; `x-forwarded-for`
       // can be supplied by the client and is not trusted.
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      ...cookieAdvanced({ request }),
     },
     hooks: {
-      // Addresses outside `ALLOWED_EMAILS` get neither a code nor a session.
+      // Allowlist, sign-in codes only, and no codes at all from a Worker
+      // without a Turnstile key pair (see `guardAuthRequest`).
+      // Adding or removing a passkey also needs the session in the database:
+      // the endpoint itself trusts the cookie cache, which would let a
+      // signed-out or revoked session do it for a few more minutes.
       before: createAuthMiddleware(async (ctx) => {
-        if (!SIGN_IN_PATHS.has(ctx.path)) {
+        guardAuthRequest({ path: ctx.path, body: ctx.body, turnstile });
+        if (
+          AUTHORITATIVE_SESSION_PATHS.has(ctx.path) &&
+          !(await getAuthoritativeSessionFromCtx(ctx))
+        ) {
+          throw new APIError("UNAUTHORIZED");
+        }
+      }),
+      // The notice of a new passkey goes out once it is stored, never for a
+      // registration that failed on the way, and after the answer (the user
+      // sees the passkey listed at once).
+      after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== VERIFY_PASSKEY_REGISTRATION_PATH) {
           return;
         }
-        const email: unknown = ctx.body?.email;
-        if (typeof email === "string" && !isEmailAllowed(email)) {
-          throw new APIError("FORBIDDEN", { message: "This email address cannot sign in." });
+        const stored = storedPasskeyName(ctx.context.returned);
+        const user = ctx.context.session?.user;
+        if (stored !== undefined && user?.email) {
+          // In the account's language: its saved choice, else this page's.
+          const language = requestLanguage({ request, saved: user.language });
+          waitUntil(
+            notifyPasskeyAdded({ email: user.email, passkeyName: stored, request, language }),
+          );
         }
       }),
     },
     plugins: [
       // Sending a sign-in code needs a passed Turnstile challenge (the
-      // `x-captcha-response` header), so the mailer cannot be driven by bots.
-      // Local runs and browser tests can switch this off (`TURNSTILE_DISABLED`).
-      ...(turnstileDisabled({ request })
-        ? []
-        : [
+      // `x-captcha-response` header), so bots cannot drive the mailer.
+      // Entering one needs none (see `CAPTCHA_PATHS`). On a deployed Worker the token must be solved on
+      // this app's hostname for signing in (`turnstileBinding`), not on the
+      // account-deletion form. Local runs and browser tests can switch this
+      // off (`TURNSTILE_DISABLED`); without a key pair sending is refused
+      // outright (`guardAuthRequest`).
+      ...(turnstile.status === "enabled"
+        ? [
             captcha({
               provider: "cloudflare-turnstile",
-              secretKey: turnstileSecretKey(),
-              endpoints: ["/email-otp/send-verification-otp"],
+              secretKey: turnstile.secretKey,
+              endpoints: [...CAPTCHA_PATHS],
+              ...(binding
+                ? { expectedAction: "sign-in", allowedHostnames: [binding.hostname] }
+                : {}),
             }),
-          ]),
+          ]
+        : []),
       emailOTP({
         otpLength: OTP_LENGTH,
         expiresIn: OTP_EXPIRES_IN_SECONDS,
         // Browser tests sign in with a fixed code (`E2E_SIGN_IN_CODE`), only
         // ever for a local address; otherwise Better Auth draws a random one.
         generateOTP: () => (isLocalRequest(request) && env.E2E_SIGN_IN_CODE) || undefined,
-        sendVerificationOTP: async ({ email, otp }) => {
-          await sendOtp({ email, otp });
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          // Only sign-in codes are ever mailed (also refused earlier by
+          // `guardAuthRequest`); other kinds are not part of the app's flow.
+          if (type !== "sign-in") {
+            return;
+          }
+          // In the language of the page that asked for it.
+          await sendOtp({ email, otp, language: requestLanguage({ request }) });
         },
       }),
+      ...passkeys,
       tanstackStartCookies(),
     ],
   });
 }
 
-async function sendOtp({ email, otp }: { email: string; otp: string }): Promise<void> {
+async function sendOtp({
+  email,
+  otp,
+  language,
+}: {
+  email: string;
+  otp: string;
+  language: Language;
+}): Promise<void> {
   const message = buildOtpEmail({
     appName: APP_NAME,
     otp,
     expiresInMinutes: OTP_EXPIRES_IN_SECONDS / 60,
+    language,
   });
 
   if (import.meta.env.DEV) {
@@ -113,6 +220,58 @@ async function sendOtp({ email, otp }: { email: string; otp: string }): Promise<
     return;
   }
 
+  await sendMail({ email, message });
+}
+
+/**
+ * The label of the passkey `/passkey/verify-registration` answered with, or
+ * `undefined` when it answered with an error (an `APIError`, which has no
+ * `credentialID`).
+ */
+function storedPasskeyName(returned: unknown): string | undefined {
+  if (typeof returned !== "object" || returned === null || !("credentialID" in returned)) {
+    return undefined;
+  }
+  const { name } = returned as { name?: unknown };
+  return typeof name === "string" && name !== "" ? name : PASSKEY_LABEL;
+}
+
+/**
+ * Tells the account's address that a passkey was added. A failed send is
+ * logged and swallowed: the passkey is already verified, and the user sees
+ * it listed on the account page either way.
+ */
+async function notifyPasskeyAdded({
+  email,
+  passkeyName: name,
+  request,
+  language,
+}: {
+  email: string;
+  passkeyName: string;
+  request: Request;
+  language: Language;
+}): Promise<void> {
+  const message = buildPasskeyAddedEmail({
+    appName: APP_NAME,
+    passkeyName: name,
+    accountUrl: new URL("/account", request.url).toString(),
+    language,
+  });
+  if (import.meta.env.DEV) {
+    // oxlint-disable-next-line no-console
+    console.info(`[auth] passkey "${name}" added for ${email}`);
+    return;
+  }
+  try {
+    await sendMail({ email, message });
+  } catch (error) {
+    // oxlint-disable-next-line no-console
+    console.error("[auth] could not mail the passkey notice", error);
+  }
+}
+
+async function sendMail({ email, message }: { email: string; message: OtpEmail }): Promise<void> {
   await env.EMAIL.send({
     from: env.EMAIL_FROM,
     to: email,

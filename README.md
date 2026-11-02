@@ -8,14 +8,20 @@ an installable PWA and Web Push notifications — on the toolchain used by
 ## Features
 
 - **Email sign-in** — [Better Auth](https://www.better-auth.com/) with the email OTP plugin: enter an
-  address, receive a 6-digit code (sent through Cloudflare Email Service), enter it. First-time
+  address, receive an 8-digit code (sent through Cloudflare Email Service), enter it. First-time
   addresses are registered on the spot; `ALLOWED_EMAILS` can restrict who may sign in.
-  [Turnstile](https://developers.cloudflare.com/turnstile/) guards the mailer and account deletion.
+  [Turnstile](https://developers.cloudflare.com/turnstile/) guards sending a code and account
+  deletion; see [Sign-in security](#sign-in-security).
   Accounts can be closed from the account page, deleting every row of the user. Sessions last 90
   days and slide forward while the user keeps coming back; sign-in requests are rate-limited in D1
   (off for local runs), keyed by the client address Cloudflare reports (`CF-Connecting-IP`).
+- **Passkeys** — after an email sign-in, users can add passkeys and then sign in with a fingerprint,
+  face or screen lock instead of a code (`@better-auth/passkey`). The email code always keeps
+  working. Offered on the custom domain set in `PASSKEY_RP_ID` and on local runs; see
+  [Passkeys](#passkeys).
 - **PWA** — web app manifest, icons (drawn by `scripts/generate-icons.mjs`), and a service worker
-  (`public/sw.js`) that caches the hashed assets and serves an offline page.
+  (`public/sw.js`) that caches the hashed assets and serves an offline page. `public/_headers`
+  marks the hashed assets immutable, so the browser does not revalidate them on every page either.
 - **Install button** — fires the browser's own install dialog where one is offered (Chrome, Edge,
   Samsung Internet), and shows the "Add to Home Screen" steps on iOS and on phones whose browser
   offers none. Hidden once the app runs installed.
@@ -29,9 +35,19 @@ an installable PWA and Web Push notifications — on the toolchain used by
   nonce-based Content-Security-Policy: each response gets a fresh nonce that TanStack Start puts on
   every script it renders, and `'strict-dynamic'` lets those load the rest. Loading anything from
   another origin (an image CDN, an analytics script) means adding it to `contentSecurityPolicy`;
-  the browser tests fail on any CSP violation. `vite dev` runs without the policy.
-- **No zoom on iOS** — form controls are at least 16 px, which keeps iOS Safari from zooming in when
-  one is tapped; `e2e/input-zoom.spec.ts` checks every screen.
+  the browser tests fail on any CSP violation. `vp dev` runs without the policy.
+- **Japanese and English** — every piece of the app's text (labels, errors, page titles, the emails)
+  comes from one catalogue per language (`src/i18n/ja.ts`, and `src/i18n/en.ts` typed against it,
+  so a missing key fails the typecheck). The language is resolved on the server, so the first render
+  is already in it: the user's saved choice (on the user row), then the `lang` cookie, then the
+  browser's `Accept-Language` (any `ja*` is Japanese, anything else English). A switcher
+  (🌐 日本語 / English) sits on the account page and in the menu and switches at once.
+- **Phone UI rules** — popups fill a phone's screen (`Sheet`, `Drawer`; tablets get a centred dialog),
+  no pinch zoom (viewport meta, `touch-action: pan-x pan-y` and iOS gesture events cancelled),
+  form controls at least 16 px so iOS Safari never zooms into one, a spinner inside every button
+  that waits on the server (never a full-screen block), one emoji per action (`BUTTON_EMOJI`), and
+  pull down to reload in the installed app (`PullToReload`). `e2e/ui-rules.spec.ts` and
+  `e2e/input-zoom.spec.ts` check them.
 
 ## What's included
 
@@ -40,19 +56,20 @@ an installable PWA and Web Push notifications — on the toolchain used by
 | Framework         | [TanStack Start](https://tanstack.com/start) + [React](https://react.dev/)                                     | `vite.config.ts`, `src/router.tsx`, `src/routes/`           |
 | Styling           | [Tailwind CSS v4](https://tailwindcss.com/)                                                                    | `src/styles.css`                                            |
 | Hosting           | [Cloudflare Workers](https://developers.cloudflare.com/workers/) (D1, Email Service, Rate Limiting, Turnstile) | `wrangler.jsonc`, `src/server.ts`                           |
-| Auth              | [Better Auth](https://www.better-auth.com/) (email OTP)                                                        | `src/lib/auth.ts`                                           |
+| Auth              | [Better Auth](https://www.better-auth.com/) (email OTP, passkeys)                                              | `src/lib/auth.ts`                                           |
 | Database          | [Drizzle ORM](https://orm.drizzle.team/) on D1                                                                 | `src/db/schema.ts`, `drizzle/`, `drizzle.config.ts`         |
 | Runtime / tooling | [mise](https://mise.jdx.dev/)                                                                                  | `mise.toml`                                                 |
 | Package manager   | [pnpm](https://pnpm.io/)                                                                                       | `pnpm-workspace.yaml`, `.npmrc`                             |
 | Language          | [TypeScript](https://www.typescriptlang.org/)                                                                  | `tsconfig.json`                                             |
-| Unit tests        | [Vitest](https://vitest.dev/) + Testing Library                                                                | `vitest.config.ts`                                          |
+| Toolchain         | [Vite+](https://viteplus.dev/) (`vp`: Vite, Vitest, Oxlint, Oxfmt, staged-file checks)                         | `vite.config.ts`                                            |
+| Unit tests        | [Vitest](https://vitest.dev/) (through `vp test`) + Testing Library                                            | `vitest.config.ts`                                          |
 | Browser tests     | [Playwright](https://playwright.dev/) against the built Worker in the Cloudflare emulator                      | `playwright.config.ts`, `e2e/`                              |
-| Format            | [oxfmt](https://oxc.rs/)                                                                                       | `.oxfmtrc.json`                                             |
-| Lint              | [oxlint](https://oxc.rs/)                                                                                      | `.oxlintrc.json`                                            |
+| Format            | [Oxfmt](https://oxc.rs/) (through `vp fmt`)                                                                    | `vite.config.ts` (`fmt`)                                    |
+| Lint              | [Oxlint](https://oxc.rs/) (through `vp lint`)                                                                  | `vite.config.ts` (`lint`)                                   |
 | Unused code       | [knip](https://knip.dev/)                                                                                      | `knip.ts`                                                   |
 | Spelling          | [cspell](https://cspell.org/)                                                                                  | `cspell.json`                                               |
 | Secret scanning   | [secretlint](https://github.com/secretlint/secretlint)                                                         | `.secretlintrc.json`                                        |
-| Git hooks         | [simple-git-hooks](https://github.com/toplenboren/simple-git-hooks) + lint-staged                              | `package.json`, `.lintstagedrc.js`                          |
+| Git hooks         | Vite+ hooks (`vp staged` on pre-commit)                                                                        | `.vite-hooks/pre-commit`, `vite.config.ts` (`staged`)       |
 | AI rules          | [rulesync](https://github.com/dyoshikawa/rulesync)                                                             | `rulesync.jsonc`, `.rulesync/`                              |
 | Workflow lint     | [actionlint](https://github.com/rhysd/actionlint)                                                              | `.github/workflows/actionlint.yml`                          |
 | Action pinning    | [pinact](https://github.com/suzuki-shunsuke/pinact)                                                            | `.pinact.yaml`, `.github/workflows/pinact.yml`              |
@@ -71,18 +88,19 @@ pnpm dev           # http://localhost:5173 — the sign-in code is printed in th
 pnpm cicheck       # run everything CI runs (plus `pnpm e2e` for the browser tests)
 ```
 
-`pnpm dev` runs Vite's dev server: no email is sent (the code is logged) and Turnstile uses
+`pnpm dev` runs the Vite dev server (`vp dev`): no email is sent (the code is logged) and Turnstile uses
 Cloudflare's always-passing test keys. The service worker — and so install and push notifications —
 only runs in the built app: `pnpm dev:cf` builds it and serves it in the Cloudflare emulator (workerd)
 at `http://localhost:4173` with a local D1. Copy `.dev.vars.example` to `.dev.vars` for local
 variables; `pnpm dev:cf --vars .dev.vars.e2e` switches Turnstile off and fixes the sign-in code to
-`123456`.
+`12345678`.
 
 Then rename the project:
 
 1. `package.json` — `name`, `description`, `keywords`, `homepage`, `bugs`, `repository`
 2. `src/lib/app.ts` — `APP_NAME`
-3. `wrangler.jsonc` and `cloudflare.config.ts` — `name`, `database_name`, and the `vars` (`wrangler.example.jsonc` shows a filled-in one)
+3. `wrangler.jsonc` and `cloudflare.config.ts` — `name`, `database_name`, and the `vars` (`wrangler.example.jsonc` shows a filled-in one;
+   `PASSKEY_RP_ID` stays empty until the app has a custom domain)
 4. `public/manifest.webmanifest`, `public/offline.html`, `public/sw.js` — the name, colors and cache names
 5. `scripts/generate-icons.mjs` and `src/components/logo.tsx` — the icon; run `pnpm icons`
 6. `README.md` — this file; `LICENSE` — the copyright holder, if it isn't you
@@ -97,31 +115,118 @@ Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does 
 `cloudflare.config.ts` describes the same Worker for Cloudflare's `cf` CLI (`pnpm cf:dry-run`):
 mirror every change to `wrangler.jsonc` there (`domains` for the custom domain, `bindings.text` for the
 vars, the D1 `id`). Deploys still run on wrangler, as `cf deploy` 1.0.0-beta.5 drops the
-Worker's secrets.
+Worker's secrets. `@cloudflare/vite-plugin` stays at 1.64.0 (Dependabot ignores newer releases):
+1.65.0 dropped the support for `cloudflare.config.ts` that `cf` builds through.
 
 1. Create the database and put its id in `wrangler.jsonc` (`database_id`):
    `pnpm exec wrangler d1 create ts-template`, then `pnpm db:migrate:remote`.
 2. Onboard the sender domain to Cloudflare Email Service (Dashboard → Email → Email Sending) and set
    `EMAIL_FROM` in `wrangler.jsonc`.
 3. Create a Turnstile widget for your hostnames, put its site key in `TURNSTILE_SITE_KEY` and its
-   secret in the `TURNSTILE_SECRET_KEY` secret.
+   secret in the `TURNSTILE_SECRET_KEY` secret. The test keys are only used on local runs; without a
+   real pair the deployed app refuses sign-in and account deletion.
 4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in `wrangler.jsonc`, the private
    key in the `VAPID_PRIVATE_KEY` secret, and a contact in `VAPID_SUBJECT`.
-5. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
+5. For passkeys, serve the app from a custom domain (uncomment `routes` in `wrangler.jsonc`) and
+   put that hostname in `PASSKEY_RP_ID` (see [Passkeys](#passkeys)). Left empty, the deployed app
+   signs in by email only.
+6. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
 
-   | Secret                 | Purpose                                                          |
-   | ---------------------- | ---------------------------------------------------------------- |
-   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`). Required.     |
-   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens; unset means the test keys.            |
-   | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.      |
-   | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone. |
+   | Secret                 | Purpose                                                                                    |
+   | ---------------------- | ------------------------------------------------------------------------------------------ |
+   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`, 32+ chars). Required: unset, pages fail. |
+   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens. Required: unset, every token fails.                             |
+   | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.                                |
+   | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone.                           |
 
-6. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
+7. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
    add the `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template plus Account → D1 → Edit)
    and `CLOUDFLARE_ACCOUNT_ID` repository secrets and run the Deploy workflow, or switch it to run on
    every push (see the comment at the top of `.github/workflows/deploy.yml`).
 
 To serve the app from your own hostname, uncomment `routes` in `wrangler.jsonc`.
+
+The Worker has a nightly Cron Trigger (`triggers.crons` in `wrangler.jsonc`, `scheduled` in
+`src/server.ts`) that deletes expired sign-in codes and passkey challenges from D1. Add your own
+scheduled work to that handler.
+
+## Sign-in security
+
+What the auth code enforces, so a change does not quietly drop one of them:
+
+- **The auth secret fails closed.** Outside `vp dev` and local requests, `resolveAuthSecret`
+  (`src/lib/auth-secret.ts`) refuses to run when `BETTER_AUTH_SECRET` is unset, shorter than 32
+  characters, or Better Auth's public default secret — Better Auth itself only refuses that default
+  when `NODE_ENV` is `production`, which a Worker never sets. Every page then answers with an error
+  until the secret is set. Local runs use a fixed development secret.
+- **Turnstile on sending a code.** Better Auth's `captcha` plugin guards
+  `/email-otp/send-verification-otp` and expects the token in `x-captcha-response`, so bots cannot
+  drive the mailer. Entering a code needs no challenge: the email OTP plugin spends a code after
+  three wrong guesses, and Better Auth rate-limits `/sign-in/*` (`CAPTCHA_PATHS` in
+  `src/lib/auth-guard.ts`). The sign-in page renders a widget on the email step only, fresh after
+  every send (tokens are single-use). On a deployed Worker a
+  token must have been solved on the request's hostname for the action it is spent on (`sign-in`,
+  or `delete-account` for account deletion; `turnstileBinding` in `src/lib/turnstile.ts`), so a
+  token from one form does not work on the other. `TURNSTILE_DISABLED=1` switches all of this off
+  for local runs and browser tests only.
+- **`__Host-` cookies.** On https, every Better Auth cookie is named `__Host-better-auth.*`
+  (`cookieAdvanced` in `src/lib/auth.ts`): `Secure`, `Path=/` and no `Domain`, so another host under
+  the same parent domain cannot plant a session cookie for the app to read in place of the user's
+  own. Plain http (local runs) keeps the default names. Switching an existing deployment to these
+  names signs every user out once.
+- **Unused endpoints are off.** `DISABLED_AUTH_PATHS` (`src/lib/auth-guard.ts`) answers 404 for the
+  email OTP plugin's password-reset, email-change and verification endpoints and for Better Auth's
+  own password, email-verification, email-change, user-deletion and social-account endpoints. Turn
+  one back on only together with the checks it needs.
+- **Sensitive actions read the session from D1.** The session cookie caches the session for five
+  minutes, which outlives a sign-out or revocation elsewhere. Account deletion reads it with
+  `disableCookieCache`, and adding or deleting a passkey requires it in the database
+  (`AUTHORITATIVE_SESSION_PATHS`).
+
+## Passkeys
+
+A signed-in user can add passkeys and then sign in with one instead of a code; the email code keeps
+working for everyone, so a lost device never locks anyone out.
+
+- **Where they work.** A passkey is bound to one domain (the relying party ID). `@better-auth/passkey`
+  (the `passkey` table) is mounted only on the hosts `passkeyConfig` (`src/lib/passkey.ts`)
+  allows, and only by the auth endpoints (`src/lib/auth-passkey.ts`, imported on demand by
+  `src/routes/api/auth/$.ts`, so its WebAuthn libraries stay off every other request's cold
+  start): the hostname in the `PASSKEY_RP_ID` var, and local runs on `http://localhost:4173`
+  (`pnpm dev:cf`, `pnpm e2e`) and `:5173` (`pnpm dev`). The workers.dev address and any other
+  host get no passkey endpoints, and the pages hide every passkey control
+  there (`getPasskeyAvailability`). The accepted origin is pinned to `https://<PASSKEY_RP_ID>` (and
+  the two local origins), never read from the request: the emulator rewrites the URL and `Origin`
+  to the custom domain.
+- **Setting it up in a project made from this template.** Serve the app from its custom domain
+  (`routes` in `wrangler.jsonc`), then set `"PASSKEY_RP_ID": "app.example.com"` in `wrangler.jsonc`
+  `vars`: the bare hostname, no scheme, port or path, exactly the host users open. Deploy, and the
+  sign-in page shows the passkey button there. Changing the domain later orphans every passkey made
+  on the old one (users sign in by email and add a new one), so pick the long-term hostname.
+- **Adding one.** After an email sign-in the home page offers it once per device
+  (`src/components/passkey-offer.tsx`; "Not now" stops the offer on that device, stored in
+  `localStorage`), and the account page lists, adds and deletes them. Adding needs a session at most
+  a day old (Better Auth's `freshAge`); since sessions last 90 days, the account page tells an older
+  session to sign out and sign in by email again first. Adding or deleting also needs the session in
+  the database, not just the 5-minute cookie cache, so a signed-out or revoked session cannot do
+  either.
+- **Labels and the notice email.** The label is always the app's own (`passkeyName`: the password
+  manager known by its AAGUID, plus browser and device from the user agent): a client-supplied name
+  is refused and `/passkey/update-passkey` is switched off. Every new passkey is mailed to the
+  account's address as a notice (`src/lib/passkey-email.ts`), from an `after` hook once the passkey
+  is stored, in the background after the answer.
+- **Signing in.** The sign-in page has a 🔑 button and offers saved passkeys in the email field's
+  autofill (conditional mediation, started again after each attempt until five have failed).
+  `ALLOWED_EMAILS` applies to passkeys too: an account removed from the list cannot sign in with an
+  old passkey. Signing in with a passkey mails nothing, so it has no Turnstile challenge; instead
+  Better Auth's rate limit is tightened for it (`customRules`: 20 challenges and 10 sign-ins a minute
+  per client address), since every challenge is a D1 write. Every visit to the sign-in page hands
+  out a challenge (a `verification` row) that is never used if no passkey is picked; the nightly
+  Cron Trigger deletes expired ones (`src/lib/verification-cleanup.ts`).
+- Browser tests use Chromium's virtual authenticator (`e2e/passkey.spec.ts`). They are skipped when
+  the tests run on another port (`E2E_PORT`), where no passkeys are offered. `E2E_INSPECTOR_PORT`
+  moves wrangler's inspector off 9229 when another emulator holds it.
+- Closing the account deletes its passkeys with everything else.
 
 ## Sending push notifications
 
@@ -145,15 +250,15 @@ sends the new one to `/api/push/subscription`.
 
 | Script                   | Description                                                                             |
 | ------------------------ | --------------------------------------------------------------------------------------- |
-| `pnpm dev`               | Vite dev server                                                                         |
+| `pnpm dev`               | Vite dev server (`vp dev`)                                                              |
 | `pnpm dev:cf`            | Build and serve the Worker in the Cloudflare emulator (`--fresh` wipes the local state) |
-| `pnpm build`             | Build the client assets and the Worker into `dist`                                      |
+| `pnpm build`             | Build the client assets and the Worker into `dist` (`vp build`)                         |
 | `pnpm run deploy`        | Build and deploy to Cloudflare Workers                                                  |
-| `pnpm check`             | `fmt:check` + `oxlint` + `typecheck`                                                    |
+| `pnpm check`             | `vp check` (format, lint) + `typecheck`                                                 |
 | `pnpm cicheck`           | `cicheck:code` + `cicheck:content`                                                      |
 | `pnpm cicheck:code`      | `check` + `test`                                                                        |
 | `pnpm cicheck:content`   | `cspell` + `secretlint`                                                                 |
-| `pnpm test`              | Run the unit tests                                                                      |
+| `pnpm test`              | Run the unit tests (`vp test run`)                                                      |
 | `pnpm e2e`               | Run the browser tests against the built Worker in the emulator                          |
 | `pnpm db:generate`       | Generate a migration from `src/db/schema.ts` (`--name <change>`)                        |
 | `pnpm db:migrate:local`  | Apply migrations to the local D1                                                        |
@@ -162,7 +267,7 @@ sends the new one to `/api/push/subscription`.
 | `pnpm cf-typegen`        | Regenerate `worker-configuration.d.ts` after changing bindings                          |
 | `pnpm icons`             | Redraw the PWA icons                                                                    |
 | `pnpm vapid`             | Print a new VAPID key pair for push notifications                                       |
-| `pnpm fix`               | Auto-fix formatting and lint problems                                                   |
+| `pnpm fix`               | Auto-fix formatting and lint problems (`vp check --fix`)                                |
 | `pnpm generate`          | Regenerate AI tool configs from `.rulesync/`                                            |
 | `pnpm knip`              | Report unused files, exports, and dependencies                                          |
 
@@ -183,7 +288,7 @@ sends the new one to `/api/push/subscription`.
   step is genuinely required. CI installs with `--ignore-scripts`.
 - Every third-party GitHub Action is pinned to a full-length commit SHA, enforced by `pinact` in CI.
 - Workflows declare the narrowest `permissions:` block they need.
-- `secretlint` runs over every staged file through lint-staged, and over the whole tree in CI.
+- `secretlint` runs over every staged file through `vp staged`, and over the whole tree in CI.
 - Trivy scans the devcontainer Dockerfile for misconfigurations on every change, failing on
   `CRITICAL`/`HIGH`. Findings that are intentional go in `.trivyignore` with a reason.
 - The devcontainer installs [Safe Chain](https://github.com/AikidoSec/safe-chain) so npm/pnpm

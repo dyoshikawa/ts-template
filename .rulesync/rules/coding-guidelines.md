@@ -11,8 +11,6 @@ globs: ["**/*.ts", "**/*.tsx"]
   - Not only function arguments, but also class constructor arguments.
 - If you have to write validation logic, please consider using `zod/mini` to do it actively.
   - `zod/mini` is a subset of `zod` that minimizes the bundle size.
-- To import code, you should always use static imports. You should not use dynamic imports.
-  - Static imports are easier for bundlers to analyze and optimize, e.g. tree-shaking.
 - TypeScript file names should be in kebab-case, even for class implementation files.
 - Don't create barrel files. Please always import the implementation file directly.
   - Barrel files are harmful to tree-shaking and import path transparency.

@@ -1,15 +1,15 @@
 import { expect, test as base, type Page } from "@playwright/test";
 
 /** The code every sign-in accepts under `.dev.vars.e2e` (`E2E_SIGN_IN_CODE`). */
-export const SIGN_IN_CODE = "123456";
+export const SIGN_IN_CODE = "12345678";
 
 /** Signs in as `email` (registered on the spot) and waits for the home page. */
 export async function signIn({ page, email }: { page: Page; email: string }): Promise<void> {
   await page.goto("/login");
-  await page.getByRole("textbox", { name: "Email address" }).fill(email);
-  await page.getByRole("button", { name: "Send code" }).click();
-  await page.getByRole("textbox", { name: "Sign-in code" }).fill(SIGN_IN_CODE);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("textbox", { name: "メールアドレス" }).fill(email);
+  await page.getByRole("button", { name: "コードを送信" }).click();
+  await page.getByRole("textbox", { name: "サインインコード" }).fill(SIGN_IN_CODE);
+  await page.getByRole("button", { name: "サインイン", exact: true }).click();
   await page.waitForURL("/");
   await expect(page.getByRole("link", { name: email })).toBeVisible();
 }

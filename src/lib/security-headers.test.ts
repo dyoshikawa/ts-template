@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { contentSecurityPolicy, createNonce, withSecurityHeaders } from "./security-headers";
 
@@ -19,7 +19,7 @@ describe("withSecurityHeaders", () => {
     await expect(response.text()).resolves.toBe("<p>hi</p>");
   });
 
-  it("only forbids framing when there is no nonce (vite dev)", () => {
+  it("only forbids framing when there is no nonce (vp dev)", () => {
     const response = withSecurityHeaders(new Response(""));
     expect(response.headers.get("Content-Security-Policy")).toBe("frame-ancestors 'none'");
   });

@@ -11,6 +11,10 @@ const config: KnipConfig = {
     "@secretlint/secretlint-rule-preset-recommend",
     // `cloudflare:workers` is a Workers runtime module, not an npm package.
     "cloudflare",
+    // Run by `vp fmt` / `vp lint`, which look for the project's own copies
+    // first (see the catalog in pnpm-workspace.yaml).
+    "oxfmt",
+    "oxlint",
   ],
 };
 

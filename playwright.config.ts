@@ -1,7 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/** Where the emulator serves the built Worker for the tests; `E2E_PORT` moves it off a busy port. */
+/**
+ * Where the emulator serves the built Worker for the tests; `E2E_PORT` moves
+ * it off a busy port, and `E2E_INSPECTOR_PORT` moves wrangler's inspector off
+ * 9229 the same way.
+ */
 const PORT = Number(process.env.E2E_PORT ?? 4173);
+const INSPECTOR = process.env.E2E_INSPECTOR_PORT
+  ? ` --inspector-port ${Number(process.env.E2E_INSPECTOR_PORT)}`
+  : "";
 const BASE_URL = `http://localhost:${PORT}`;
 
 /**
@@ -24,12 +31,16 @@ export default defineConfig({
     ...devices["iPhone 13"],
     // The mobile emulation switches to WebKit; keep Chromium.
     defaultBrowserType: "chromium",
+    // The tests read the Japanese text, the app's default language (the
+    // browser asks for it through Accept-Language); e2e/i18n.spec.ts opens
+    // the screens in English.
+    locale: "ja-JP",
     // The service worker would otherwise serve stale assets across builds.
     serviceWorkers: "block",
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `node scripts/cf-dev.mjs --vars .dev.vars.e2e --state .wrangler/state-e2e --fresh --port ${PORT}`,
+    command: `node scripts/cf-dev.mjs --vars .dev.vars.e2e --state .wrangler/state-e2e --fresh --port ${PORT}${INSPECTOR}`,
     url: `${BASE_URL}/login`,
     reuseExistingServer: false,
     timeout: 180_000,

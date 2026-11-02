@@ -11,7 +11,7 @@
 //
 // Bump VERSION after changing the caching rules, or installed apps keep the old ones.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const ASSET_CACHE = `ts-template-assets-${VERSION}`;
 const SHELL_CACHE = `ts-template-shell-${VERSION}`;
 // Static Assets serve public/offline.html at the extension-less URL and redirect
