@@ -5,10 +5,10 @@
   "compatibility_flags": ["nodejs_compat"],
   // Wraps TanStack Start's handler to add the security headers.
   "main": "src/server.ts",
-  // To serve the app from your own hostname (a Custom Domain: DNS and the
-  // certificate are set up by `wrangler deploy`), uncomment and edit this.
-  // wrangler switches the workers.dev address off once routes exist unless
-  // `workers_dev` stays true.
+  // To serve the app from your own hostname (a Custom Domain: the deploy sets
+  // up DNS and the certificate), uncomment and edit this, and `domains` /
+  // `workersDev` in cloudflare.config.ts, which the deploy reads. Keep
+  // `workers_dev` / `workersDev` true to keep the workers.dev address as well.
   // "routes": [{ "pattern": "app.example.com", "custom_domain": true }],
   // "workers_dev": true,
   // Nightly at 03:30 UTC: deletes expired sign-in codes and passkey
