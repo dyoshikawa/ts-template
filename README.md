@@ -112,23 +112,26 @@ Then rename the project:
 
 `wrangler.example.jsonc` shows `wrangler.jsonc` filled in for production (custom domain, sender,
 Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does not read it.
-`cloudflare.config.ts` describes the same Worker for Cloudflare's `cf` CLI (`pnpm cf:dry-run`):
-mirror every change to `wrangler.jsonc` there (`domains` for the custom domain, `bindings.text` for the
-vars, the D1 `id`). Deploys still run on wrangler, as `cf deploy` 1.0.0-beta.5 drops the
-Worker's secrets. `@cloudflare/vite-plugin` stays at 1.64.0 (Dependabot ignores newer releases):
-1.65.0 dropped the support for `cloudflare.config.ts` that `cf` builds through.
+Deploys run on Cloudflare's `cf` CLI, which reads `cloudflare.config.ts`, builds with Vite and
+uploads a new version of the Worker; secrets set with `wrangler secret put` are kept. `wrangler.jsonc`
+stays for local dev, the browser tests, D1 migrations and `wrangler types`, so the bindings live in
+both files: mirror every change to `wrangler.jsonc` in `cloudflare.config.ts` (`domains` for the
+custom domain, `bindings.text` for the vars, the D1 `id`) and check the binding list
+`pnpm cf:dry-run` prints. `@cloudflare/vite-plugin` stays at 1.64.0 (Dependabot ignores newer
+releases): 1.65.0 dropped the support for `cloudflare.config.ts` that `cf` builds through.
 
-1. Create the database and put its id in `wrangler.jsonc` (`database_id`):
+1. Create the database and put its id in `wrangler.jsonc` (`database_id`) and `cloudflare.config.ts`
+   (`id`):
    `pnpm exec wrangler d1 create ts-template`, then `pnpm db:migrate:remote`.
 2. Onboard the sender domain to Cloudflare Email Service (Dashboard → Email → Email Sending) and set
-   `EMAIL_FROM` in `wrangler.jsonc`.
+   `EMAIL_FROM` in both files.
 3. Create a Turnstile widget for your hostnames, put its site key in `TURNSTILE_SITE_KEY` and its
    secret in the `TURNSTILE_SECRET_KEY` secret. The test keys are only used on local runs; without a
    real pair the deployed app refuses sign-in and account deletion.
-4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in `wrangler.jsonc`, the private
+4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in both files, the private
    key in the `VAPID_PRIVATE_KEY` secret, and a contact in `VAPID_SUBJECT`.
-5. For passkeys, serve the app from a custom domain (uncomment `routes` in `wrangler.jsonc`) and
-   put that hostname in `PASSKEY_RP_ID` (see [Passkeys](#passkeys)). Left empty, the deployed app
+5. For passkeys, serve the app from a custom domain (uncomment `routes` in `wrangler.jsonc` and
+   `domains` in `cloudflare.config.ts`) and put that hostname in `PASSKEY_RP_ID` (see [Passkeys](#passkeys)). Left empty, the deployed app
    signs in by email only.
 6. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
 
@@ -139,14 +142,18 @@ Worker's secrets. `@cloudflare/vite-plugin` stays at 1.64.0 (Dependabot ignores 
    | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.                                |
    | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone.                           |
 
-7. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
+7. Sign in once with `pnpm exec cf auth login`, then `pnpm run deploy` (not `pnpm deploy`, which is
+   a pnpm built-in). To deploy from GitHub Actions,
    add the `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template plus Account → D1 → Edit)
    and `CLOUDFLARE_ACCOUNT_ID` repository secrets and run the Deploy workflow, or switch it to run on
-   every push (see the comment at the top of `.github/workflows/deploy.yml`).
+   every push (see the comment at the top of `.github/workflows/deploy.yml`). `cf` reads the same two
+   variables.
 
-To serve the app from your own hostname, uncomment `routes` in `wrangler.jsonc`.
+To serve the app from your own hostname, uncomment `routes` in `wrangler.jsonc` and `domains` in
+`cloudflare.config.ts`. Roll a bad deploy back with `pnpm exec wrangler rollback <version id>`
+(`pnpm exec wrangler deployments list` shows the versions).
 
-The Worker has a nightly Cron Trigger (`triggers.crons` in `wrangler.jsonc`, `scheduled` in
+The Worker has a nightly Cron Trigger (`triggers.crons` in `wrangler.jsonc` and `triggers` in `cloudflare.config.ts`, `scheduled` in
 `src/server.ts`) that deletes expired sign-in codes and passkey challenges from D1. Add your own
 scheduled work to that handler.
 
@@ -199,8 +206,8 @@ working for everyone, so a lost device never locks anyone out.
   the two local origins), never read from the request: the emulator rewrites the URL and `Origin`
   to the custom domain.
 - **Setting it up in a project made from this template.** Serve the app from its custom domain
-  (`routes` in `wrangler.jsonc`), then set `"PASSKEY_RP_ID": "app.example.com"` in `wrangler.jsonc`
-  `vars`: the bare hostname, no scheme, port or path, exactly the host users open. Deploy, and the
+  (`routes` in `wrangler.jsonc`, `domains` in `cloudflare.config.ts`), then set `PASSKEY_RP_ID` to
+  `"app.example.com"` in both files: the bare hostname, no scheme, port or path, exactly the host users open. Deploy, and the
   sign-in page shows the passkey button there. Changing the domain later orphans every passkey made
   on the old one (users sign in by email and add a new one), so pick the long-term hostname.
 - **Adding one.** After an email sign-in the home page offers it once per device
@@ -253,7 +260,8 @@ sends the new one to `/api/push/subscription`.
 | `pnpm dev`               | Vite dev server (`vp dev`)                                                              |
 | `pnpm dev:cf`            | Build and serve the Worker in the Cloudflare emulator (`--fresh` wipes the local state) |
 | `pnpm build`             | Build the client assets and the Worker into `dist` (`vp build`)                         |
-| `pnpm run deploy`        | Build and deploy to Cloudflare Workers                                                  |
+| `pnpm run deploy`        | Build and deploy to Cloudflare Workers with `cf deploy`                                 |
+| `pnpm cf:dry-run`        | Build and print what `cf deploy` would upload, bindings included                        |
 | `pnpm check`             | `vp check` (format, lint) + `typecheck`                                                 |
 | `pnpm cicheck`           | `cicheck:code` + `cicheck:content`                                                      |
 | `pnpm cicheck:code`      | `check` + `test`                                                                        |

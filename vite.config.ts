@@ -17,7 +17,7 @@ export default defineConfig({
       ]);
     return [
       // `viteEnvironment.name: "ssr"` runs TanStack Start's SSR environment inside
-      // the Worker, so `wrangler deploy` ships exactly what Vite builds.
+      // the Worker, so `cf deploy` ships exactly what Vite builds.
       cloudflare({ viteEnvironment: { name: "ssr" } }),
       tailwindcss(),
       tanstackStart(),

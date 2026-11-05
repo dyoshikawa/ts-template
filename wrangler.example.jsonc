@@ -15,11 +15,13 @@
   "compatibility_date": "2026-09-18",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
-  // A Custom Domain: `wrangler deploy` creates the DNS record and certificate.
-  // The zone must be on the same Cloudflare account.
+  // A Custom Domain: the deploy creates the DNS record and certificate. The
+  // zone must be on the same Cloudflare account. Mirror it in
+  // cloudflare.config.ts (`domains`), which `pnpm run deploy` reads.
   "routes": [{ "pattern": "<app.example.com>", "custom_domain": true }],
-  // Keep the workers.dev address on as well (wrangler turns it off once
-  // routes exist). Set false to serve the app from the custom domain only.
+  // Keep the workers.dev address on as well (`workersDev` in
+  // cloudflare.config.ts). Set false to serve the app from the custom domain
+  // only.
   "workers_dev": true,
   // Nightly at 03:30 UTC: deletes expired sign-in codes and passkey
   // challenges (`scheduled` in src/server.ts).

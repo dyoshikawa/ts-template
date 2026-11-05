@@ -1,21 +1,24 @@
 import { bindings, defineConfig, triggers } from "cf/config";
 
-// Config for Cloudflare's `cf` CLI, checked with `pnpm cf:dry-run`. Deploys
-// still run on wrangler (`pnpm run deploy`): `cf deploy` 1.0.0-beta.5 drops the
-// Worker's secrets. `wrangler.jsonc` is kept alongside it for what still runs
-// on wrangler (local dev, the browser tests, D1 migrations, `wrangler types`).
-// Change a binding in both files.
+// Config for Cloudflare's `cf` CLI, which deploys the Worker (`pnpm run deploy`;
+// check it with `pnpm cf:dry-run`). `wrangler.jsonc` stays for what still runs
+// on wrangler (local dev, the browser tests, D1 migrations from `drizzle/`,
+// `wrangler types`), so change a binding in both files.
 // `@cloudflare/vite-plugin` is held at 1.64.0: 1.65.0 dropped the support for
 // this file and the Build Output `cf deploy` reads (upstream moved it to the v2
-// plugin, still in beta). D1 migrations (`drizzle/`) also stay on wrangler.
+// plugin, still in beta).
 // Secrets are set with `wrangler secret put`; they are not declared here
-// because `bindings.secret()` makes every one required.
+// because `bindings.secret()` makes every one required. A deploy keeps the
+// undeclared ones (cf 1.0.0-beta.27).
 export default defineConfig({
   worker: {
     name: "ts-template",
     compatibilityDate: "2026-09-18",
     compatibilityFlags: ["nodejs_compat"],
     entrypoint: "src/server.ts",
+    // Your own hostname (a Custom Domain), mirroring `routes` in wrangler.jsonc.
+    // workersDev: true,
+    // domains: ["app.example.com"],
     observability: {
       enabled: true,
     },
