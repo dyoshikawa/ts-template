@@ -50,7 +50,7 @@ export const ja = {
   },
   language: {
     label: "言語",
-    saveFailed: "言語を保存できませんでした。もう一度お試しください。",
+    saveFailed: "言語を保存できませんでした。",
   },
   home: {
     signedIn: {
