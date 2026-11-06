@@ -170,6 +170,24 @@ test("a failed request clears the spinner and says so where the user acted", asy
   await expect(send.locator("[data-spinner]")).toHaveCount(0);
 });
 
+test("a sign-in code that cannot reach the server says so instead of spinning forever", async ({
+  page,
+  email,
+}) => {
+  await page.goto("/login");
+  await page.route(
+    (url) => url.pathname.endsWith("/email-otp/send-verification-otp"),
+    (route) => route.abort("failed"),
+  );
+  await page.getByRole("textbox", { name: "メールアドレス" }).fill(email);
+  const send = page.getByRole("button", { name: "コードを送信" });
+  await send.click();
+  await expect(page.getByRole("alert")).toContainText("コードを送信できませんでした");
+  await expect(send.locator("[data-spinner]")).toHaveCount(0);
+  // The used Turnstile token was replaced, so the code can be asked for again.
+  await expect(send).toBeEnabled();
+});
+
 test("a slow page load shows a bar along the top and blocks nothing", async ({ page }) => {
   await page.goto("/");
   const signInLink = page.getByRole("main").getByRole("link", { name: "サインイン" });
