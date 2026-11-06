@@ -7,8 +7,7 @@ import * as z from "zod/mini";
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
 import { LANGUAGE_COOKIE, LANGUAGE_COOKIE_MAX_AGE, LANGUAGES } from "../i18n/language";
-import { createAuth } from "./auth";
-import { refreshSessionCache } from "./auth-server";
+import { readSession, refreshSessionCache } from "./auth-server";
 
 /**
  * Remembers the language the user picked: in a cookie (for this browser,
@@ -26,7 +25,7 @@ export const setLanguagePreference = createServerFn({ method: "POST" })
       sameSite: "lax",
       secure: new URL(request.url).protocol === "https:",
     });
-    const session = await createAuth({ request }).api.getSession({ headers: request.headers });
+    const session = await readSession();
     if (!session) {
       return;
     }
