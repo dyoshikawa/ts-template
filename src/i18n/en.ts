@@ -135,7 +135,7 @@ export const en: Messages = {
       body: "Closing your account deletes it and all of its data right away. Deleted data cannot be recovered.",
       understand: "I understand that all my data will be deleted and cannot be restored",
       button: "Close account and delete all data",
-      failed: "Could not close the account. Reload the page and try again.",
+      failed: "Could not close the account.",
     },
   },
   notifications: {

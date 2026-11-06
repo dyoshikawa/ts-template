@@ -45,9 +45,12 @@ function AccountPage() {
   const { turnstile, vapidPublicKey, passkeys } = Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [understood, setUnderstood] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  // A Turnstile token is single-use: after a failed attempt the widget is
+  // remounted for a fresh one, or the button would stay disabled for good.
+  const [captchaRound, setCaptchaRound] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,15 +63,18 @@ function AccountPage() {
     setError(null);
     try {
       await deleteAccount({ data: { turnstileToken: token } });
-      // The server rows are gone with the account; unsubscribe the device too.
-      await disableNotifications({ forgetOnServer: false }).catch(() => {});
-      await router.invalidate();
-      await navigate({ to: "/" });
-    } catch {
-      setError(t.account.close.failed);
+    } catch (caught) {
+      setError(failureNotice({ action: t.account.close.failed, error: caught, t, locale }));
       setPending(false);
       setToken(null);
+      setCaptchaRound((round) => round + 1);
+      return;
     }
+    // The server rows are gone with the account; unsubscribe the device too.
+    // Nothing to tell the user if that fails: no row is left to send to.
+    await disableNotifications({ forgetOnServer: false }).catch(() => undefined);
+    await router.invalidate();
+    await navigate({ to: "/" });
   };
 
   return (
@@ -103,8 +109,15 @@ function AccountPage() {
             {t.account.close.understand}
           </label>
           {understood ? (
-            <Turnstile config={turnstile} action="delete-account" onToken={setToken} />
+            <Turnstile
+              key={captchaRound}
+              config={turnstile}
+              action="delete-account"
+              onToken={setToken}
+            />
           ) : null}
+          {/* An explicit button, not autosave (ui-rule 13): closing the
+              account is irreversible, so it waits for this press. */}
           <button
             type="submit"
             disabled={!understood || !token || pending}
