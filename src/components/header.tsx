@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useI18n } from "../i18n/i18n-context";
 import { APP_NAME } from "../lib/app";
 import { type SessionData } from "../lib/auth-functions";
+import { classifyFailure, failureNotice } from "../lib/failure";
 import { loadAuthClient } from "../lib/load-auth-client";
 import { disableNotifications } from "../lib/push-client";
+import { fetchOrUnreachable } from "../lib/unreachable";
 import { Drawer } from "./drawer";
 import { InstallButton } from "./install-button";
 import { LanguageSwitcher } from "./language-switcher";
@@ -18,28 +20,36 @@ const menuLinkClass =
 
 export function Header({ session }: { session: SessionData }) {
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  // Why the last sign-out failed, shown under its button until the next try.
+  const [signOutError, setSignOutError] = useState<string | null>(null);
   const close = () => {
     setMenuOpen(false);
+    setSignOutError(null);
   };
 
   // The menu stays open with a spinner on the button until the session has
   // ended, so the user sees the sign-out happening.
   const signOut = async () => {
     setSigningOut(true);
+    setSignOutError(null);
     // Fetched first, so a failed fetch does not leave notifications switched
     // off while the session goes on; without the client, sign out through
     // the endpoint it would call.
     const authClient = await loadAuthClient();
     // Before the session ends: the server forgets this device, so the next
-    // person signed in here does not get this user's notifications.
-    await disableNotifications().catch(() => {});
-    if (authClient) {
-      await authClient.signOut();
-    } else {
-      await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => {});
+    // person signed in here does not get this user's notifications. Signing
+    // out goes ahead even if the browser fails to unsubscribe: keeping the
+    // session would not bring the subscription back.
+    await disableNotifications().catch(() => undefined);
+    const { error } = authClient ? await authClient.signOut() : await signOutWithoutClient();
+    // A session that had already ended elsewhere is signed out all the same.
+    if (error && classifyFailure(error).kind !== "signedOut") {
+      setSignOutError(failureNotice({ action: t.common.signOutFailed, error, t, locale }));
+      setSigningOut(false);
+      return;
     }
     await router.invalidate();
     setSigningOut(false);
@@ -107,6 +117,11 @@ export function Header({ session }: { session: SessionData }) {
                   {t.common.signOut}
                 </BusyLabel>
               </button>
+              {signOutError ? (
+                <p role="alert" className="px-4 pb-3 text-sm text-red-600 dark:text-red-400">
+                  {signOutError}
+                </p>
+              ) : null}
             </div>
           </>
         ) : (
@@ -126,4 +141,21 @@ export function Header({ session }: { session: SessionData }) {
       </Drawer>
     </header>
   );
+}
+
+/**
+ * Signs out through the endpoint Better Auth's client would call, for when
+ * the client's chunk could not be fetched; answers like the client does.
+ */
+async function signOutWithoutClient(): Promise<{
+  error: { status: number; code?: unknown } | null;
+}> {
+  const response = await fetchOrUnreachable("/api/auth/sign-out", { method: "POST" });
+  if (response.ok) {
+    return { error: null };
+  }
+  const body: unknown = await response.json().catch(() => null);
+  const code =
+    typeof body === "object" && body !== null ? (body as { code?: unknown }).code : undefined;
+  return { error: { status: response.status, code } };
 }

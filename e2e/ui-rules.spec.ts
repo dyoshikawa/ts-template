@@ -248,6 +248,28 @@ test("signing out keeps the menu open with a spinner until the session is gone",
   await expect(page.getByRole("link", { name: email })).toHaveCount(0);
 });
 
+test("a sign-out that cannot reach the server says so and keeps the menu open", async ({
+  page,
+  email,
+}) => {
+  await signIn({ page, email });
+  await page.route("**/api/auth/sign-out", (route) => route.abort("failed"));
+  await page.getByRole("button", { name: "メニュー", exact: true }).click();
+  const menu = page.getByRole("navigation", { name: "ts-template" });
+  const signOut = menu.getByRole("button", { name: "サインアウト", exact: true });
+  await signOut.click();
+  await expect(menu.getByRole("alert")).toHaveText(
+    /^サインアウトできませんでした。サーバーに接続できませんでした/u,
+  );
+  await expect(signOut).toBeEnabled();
+  await expect(page.getByRole("link", { name: email })).toBeVisible();
+
+  await page.unrouteAll();
+  await signOut.click();
+  await expect(menu).toBeHidden();
+  await expect(page.getByRole("link", { name: email })).toHaveCount(0);
+});
+
 const HOME_HEADING = "ts-template";
 
 /** Makes the page believe it runs as the installed app (CDP cannot emulate `display-mode`). */
