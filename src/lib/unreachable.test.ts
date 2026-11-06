@@ -41,3 +41,27 @@ describe("fetchOrUnreachable", () => {
     expect(await fetchOrUnreachable("/x")).toBe(plain);
   });
 });
+
+describe("fetchOrUnreachable's edges", () => {
+  it("passes on a deadline's TimeoutError", async () => {
+    const timeout = new DOMException("The operation timed out.", "TimeoutError");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(timeout));
+    await expect(fetchOrUnreachable("/x")).rejects.toBe(timeout);
+  });
+
+  it("reads a standard Retry-After in seconds, and ignores a date", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(new Response("{}", { status: 429, headers: { "Retry-After": "7" } })),
+    );
+    expect(await (await fetchOrUnreachable("/x")).json()).toEqual({ retryAfter: 7 });
+    const dated = new Response("{}", {
+      status: 429,
+      headers: { "Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT" },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(dated));
+    expect(await fetchOrUnreachable("/x")).toBe(dated);
+  });
+});

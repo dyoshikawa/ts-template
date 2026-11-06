@@ -75,12 +75,21 @@ function byStatus({
  * - a timeout's `TimeoutError`, the router's `notFound`;
  * - a plain `Error`: a server function's failure without a status (its
  *   exception, or an answer that was not its own, reaches the page so).
- * Anything while the browser says it is offline is `offline`.
+ * A failure without a status while the browser says it is offline is `offline`.
  */
 export function classifyFailure(error: unknown, { now = Date.now() } = {}): Failure {
-  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+  const failure = classifyAnswer(error, now);
+  // The browser's word for being offline outweighs only a failure the server
+  // did not answer for: a status is the server's own say.
+  const unanswered =
+    failure.kind === "unexpected" || (failure.kind === "server" && failure.status === null);
+  if (unanswered && typeof navigator !== "undefined" && navigator.onLine === false) {
     return { kind: "offline" };
   }
+  return failure;
+}
+
+function classifyAnswer(error: unknown, now: number): Failure {
   if (error instanceof DOMException && error.name === "TimeoutError") {
     return { kind: "timeout" };
   }

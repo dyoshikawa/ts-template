@@ -73,8 +73,14 @@ function AccountPage() {
     // The server rows are gone with the account; unsubscribe the device too.
     // Nothing to tell the user if that fails: no row is left to send to.
     await disableNotifications({ forgetOnServer: false }).catch(() => undefined);
-    await router.invalidate();
-    await navigate({ to: "/" });
+    try {
+      await router.invalidate();
+      await navigate({ to: "/" });
+    } catch {
+      // The account is gone either way: load the home page afresh rather
+      // than leave the button spinning.
+      window.location.assign("/");
+    }
   };
 
   return (

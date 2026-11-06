@@ -16,12 +16,13 @@ function unreachableResponse(): Response {
 
 /**
  * A 429 answer with its `X-Retry-After` header (seconds, Better Auth's rate
- * limiter) copied into the JSON body as `retryAfter`, where Better Auth's
+ * limiter; or a standard `Retry-After` in seconds) copied into the JSON body as `retryAfter`, where Better Auth's
  * client error carries it (the client passes no headers on); any other
  * answer as it came.
  */
 async function withRetryAfter(response: Response): Promise<Response> {
-  const retryAfter = response.headers.get("X-Retry-After");
+  // Better Auth's own header, else the standard one (a proxy's or WAF's limit).
+  const retryAfter = response.headers.get("X-Retry-After") ?? response.headers.get("Retry-After");
   if (response.status !== 429 || retryAfter === null) {
     return response;
   }
@@ -32,7 +33,12 @@ async function withRetryAfter(response: Response): Promise<Response> {
     // Not JSON: only the wait is kept.
   }
   const fields = typeof body === "object" && body !== null ? body : {};
-  return new Response(JSON.stringify({ ...fields, retryAfter: Number(retryAfter) }), {
+  const seconds = Number(retryAfter);
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    // An HTTP date or junk: the message then says only to wait a moment.
+    return response;
+  }
+  return new Response(JSON.stringify({ ...fields, retryAfter: seconds }), {
     status: response.status,
     statusText: response.statusText,
     headers: { "content-type": "application/json" },
@@ -52,8 +58,12 @@ export const fetchOrUnreachable: typeof fetch = async (input, init) => {
     response = await fetch(input, init);
   } catch (error) {
     // A request the page cancelled itself (a passkey prompt replaced by
-    // another) is not "unreachable": the caller handles the abort.
-    if (error instanceof DOMException && error.name === "AbortError") {
+    // another) or gave a deadline is not "unreachable": the caller handles
+    // the abort, and a timeout is told apart by its name (src/lib/failure.ts).
+    if (
+      error instanceof DOMException &&
+      (error.name === "AbortError" || error.name === "TimeoutError")
+    ) {
       throw error;
     }
     return unreachableResponse();

@@ -532,6 +532,14 @@ test("a navigation while offline keeps the page whole and says it was the connec
     /user-scalable=no/u,
   );
   await expect(page.locator("html")).toHaveAttribute("lang", "ja");
+  // iOS ignores the meta, so the gesture guard must outlive the app's shell too.
+  expect(
+    await page.evaluate(() => {
+      const gesture = new Event("gesturestart", { cancelable: true });
+      document.dispatchEvent(gesture);
+      return gesture.defaultPrevented;
+    }),
+  ).toBe(true);
   await page.unrouteAll();
   await page.getByRole("button", { name: "もう一度読み込む" }).click();
   await expect(page.getByRole("heading", { name: "アカウント", exact: true })).toBeVisible();

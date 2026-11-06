@@ -51,7 +51,14 @@ export function Header({ session }: { session: SessionData }) {
       setSigningOut(false);
       return;
     }
-    await router.invalidate();
+    try {
+      await router.invalidate();
+    } catch {
+      // Signed out either way: load the page afresh rather than leave the
+      // button spinning.
+      window.location.reload();
+      return;
+    }
     setSigningOut(false);
     close();
   };
