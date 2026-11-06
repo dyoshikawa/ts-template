@@ -243,7 +243,6 @@ rulesync.local.jsonc
 # TanStack Start / Vite / Cloudflare Workers
 .output/
 .tanstack/
-.wrangler/
 .dev.vars
 
 # Playwright
@@ -253,5 +252,6 @@ rulesync.local.jsonc
 # Vitest cache written by `vp test`
 .vitest/
 
-# cf CLI build output
+# cf CLI and the Cloudflare Vite plugin: Build Output, generated types,
+# local D1 state
 .cloudflare/

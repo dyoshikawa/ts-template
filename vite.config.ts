@@ -6,7 +6,11 @@ import { defineConfig, lazyPlugins } from "vite-plus";
 export default defineConfig({
   // `lazyPlugins` loads and builds the plugins only for `vp dev` / `vp build`:
   // `vp fmt`, `vp lint` and `vp check` read this file for the blocks below,
-  // and importing the Cloudflare plugin (wrangler) alone takes seconds.
+  // and importing the Cloudflare plugin alone takes seconds.
+  // `vp preview` (scripts/cf-dev.mjs) answers like the deployed Worker: Vite's
+  // CORS middleware would add `Vary: Origin`, which keeps the service worker's
+  // cached assets from matching the requests of a page loaded offline.
+  preview: { cors: false },
   plugins: lazyPlugins(async () => {
     const [{ cloudflare }, { default: tailwindcss }, { tanstackStart }, { default: viteReact }] =
       await Promise.all([
@@ -17,8 +21,20 @@ export default defineConfig({
       ]);
     return [
       // `viteEnvironment.name: "ssr"` runs TanStack Start's SSR environment inside
-      // the Worker, so `cf deploy` ships exactly what Vite builds.
-      cloudflare({ viteEnvironment: { name: "ssr" } }),
+      // the Worker, so `cf deploy` ships exactly what Vite builds. The plugin
+      // reads `cloudflare.config.ts` and builds into the Build Output
+      // (`.cloudflare/output`) that `cf deploy` uploads.
+      cloudflare({
+        viteEnvironment: { name: "ssr" },
+        // `scripts/cf-dev.mjs` points the emulator at a state folder of its own.
+        persistState: { path: process.env.CF_DEV_STATE ?? ".cloudflare/state" },
+        // ...and moves the inspector off 9229 when another emulator holds it.
+        ...(process.env.CF_DEV_INSPECTOR_PORT
+          ? { inspectorPort: Number(process.env.CF_DEV_INSPECTOR_PORT) }
+          : {}),
+        // Every binding runs locally; nothing reaches the account.
+        remoteBindings: false,
+      }),
       tailwindcss(),
       tanstackStart(),
       viteReact(),
@@ -39,7 +55,6 @@ export default defineConfig({
       "package.json",
       "src/routeTree.gen.ts",
       "drizzle/**",
-      "worker-configuration.d.ts",
       "node_modules/**",
       "dist/**",
       ".vscode/settings.json",

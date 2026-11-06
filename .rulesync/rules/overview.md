@@ -54,10 +54,10 @@ notifications. The UI speaks Japanese (the default) and English.
 - Push notifications: send with `notifyUser` (`src/lib/push.ts`); the Web Push protocol itself is
   `src/lib/web-push.ts` (WebCrypto only — never import Node's `crypto` or the `web-push` package
   into the Worker). `public/sw.js` shows them; bump its `VERSION` after changing caching rules.
-- Worker configuration (bindings, compatibility flags) lives in @wrangler.jsonc and, for deploys,
-  in @cloudflare.config.ts : change a binding in both and check with `pnpm cf:dry-run`. Run
-  `pnpm cf-typegen` after changing bindings to refresh `worker-configuration.d.ts`. Secrets are
-  declared in `src/env.d.ts`.
+- Worker configuration (bindings, compatibility flags) lives in @cloudflare.config.ts alone (the
+  `cf` CLI and the Cloudflare Vite plugin read it; there is no wrangler): check a change with
+  `pnpm cf:dry-run`. `pnpm typecheck` regenerates the types (`.cloudflare/types/index.d.ts`);
+  secrets and local switches are declared in `src/env.d.ts`.
 - `pnpm dev` starts the dev server; `pnpm dev:cf` serves the built Worker in the emulator (the only
   local run with the service worker); `pnpm e2e` runs the browser tests there; `pnpm run deploy`
   builds and ships to Cloudflare Workers with the `cf` CLI.
