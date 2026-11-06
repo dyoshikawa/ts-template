@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 
-import { type Page } from "@playwright/test";
+import { type Page, type Route } from "@playwright/test";
 
 import { expect, signIn, test } from "./fixtures";
 
@@ -407,4 +407,80 @@ test("the pull indicator winds up, turns ready, spins on release and springs bac
   await pullTo(0);
   await touch("touchEnd");
   await expect(indicator).toHaveAttribute("data-state", "idle");
+});
+
+test("an address no page answers to says so in the page's language", async ({ page }) => {
+  await page.goto("/nowhere");
+  await expect(page.getByRole("heading", { name: "ページが見つかりません" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "ホーム" })).toBeVisible();
+  await expect(page.getByText("Not Found")).toHaveCount(0);
+});
+
+/**
+ * Fails the server-function calls of the next navigation's loader with
+ * `answer`, letting the first one (the root's session read) through, until
+ * the returned function is called.
+ */
+async function failLoader(page: Page, answer: Parameters<Route["fulfill"]>[0]) {
+  let calls = 0;
+  let failing = true;
+  await page.route("**/_serverFn/**", async (route) => {
+    calls += 1;
+    if (failing && calls > 1) {
+      await route.fulfill(answer);
+    } else {
+      await route.continue();
+    }
+  });
+  return () => {
+    failing = false;
+  };
+}
+
+test("a page whose data fails to load says it was the server, and loads again", async ({
+  page,
+  email,
+}) => {
+  await signIn({ page, email });
+  const stop = await failLoader(page, { status: 500, contentType: "text/plain", body: "boom" });
+  await page.getByRole("main").getByRole("link", { name: "アカウントページ" }).click();
+  await expect(page.getByRole("heading", { name: "ページを表示できませんでした" })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("サーバーでエラーが起きました");
+  await expect(page.getByText("Something went wrong")).toHaveCount(0);
+  stop();
+  await page.getByRole("button", { name: "もう一度読み込む" }).click();
+  await expect(page.getByRole("heading", { name: "アカウント", exact: true })).toBeVisible();
+});
+
+test("a server function's thrown Response shows its status and kind", async ({ page, email }) => {
+  await signIn({ page, email });
+  // TanStack Start rethrows a thrown Response in the browser when it carries
+  // this header, which is how a server function's refusal arrives.
+  await failLoader(page, {
+    status: 503,
+    headers: { "x-tss-raw": "thrown", "content-type": "text/plain" },
+    body: "down",
+  });
+  await page.getByRole("main").getByRole("link", { name: "アカウントページ" }).click();
+  await expect(page.getByRole("alert")).toContainText("HTTP 503");
+});
+
+test("a navigation while offline keeps the page whole and says it was the connection", async ({
+  page,
+  email,
+}) => {
+  await signIn({ page, email });
+  // Every navigation reads the session first; the root's failure used to
+  // replace the whole document, viewport meta and all.
+  await page.route("**/_serverFn/**", (route) => route.abort("failed"));
+  await page.getByRole("main").getByRole("link", { name: "アカウントページ" }).click();
+  await expect(page.getByRole("alert")).toContainText("サーバーに接続できませんでした");
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+    "content",
+    /user-scalable=no/u,
+  );
+  await expect(page.locator("html")).toHaveAttribute("lang", "ja");
+  await page.unrouteAll();
+  await page.getByRole("button", { name: "もう一度読み込む" }).click();
+  await expect(page.getByRole("heading", { name: "アカウント", exact: true })).toBeVisible();
 });

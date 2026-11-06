@@ -98,6 +98,11 @@ test.describe("in English", () => {
     await expect(page).toHaveTitle("Account — ts-template");
     expect(await japaneseLeft(page)).toEqual([]);
     expect(await overflowsSideways(page)).toBe(false);
+
+    await page.goto("/nowhere");
+    await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+    expect(await japaneseLeft(page)).toEqual([]);
+    expect(await overflowsSideways(page)).toBe(false);
   });
 });
 

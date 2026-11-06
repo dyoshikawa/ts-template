@@ -23,6 +23,30 @@ export const ja = {
   turnstile: {
     unavailable: "この操作は使えません。このサーバーでは確認の仕組みが設定されていません。",
   },
+  failure: {
+    /** A failed action's sentence followed by its kind (Japanese runs them on without a space). */
+    withKind: ({ action, kind }: { action: string; kind: string }) => `${action}${kind}`,
+    offline: "サーバーに接続できませんでした。通信状況を確かめて、もう一度お試しください。",
+    timeout: "サーバーの応答が時間内にありませんでした。もう一度お試しください。",
+    rateLimited: "短い間に試しすぎました。少し待ってからもう一度お試しください。",
+    rateLimitedUntil: ({ time }: { time: string }) =>
+      `短い間に試しすぎました。${time} 以降にもう一度お試しください。`,
+    signedOut: "サインインが切れています。もう一度サインインしてください。",
+    forbidden: "この操作は許可されていません。",
+    notFound: "見つかりませんでした（削除された可能性があります）。",
+    refused: ({ status }: { status: number }) =>
+      `サーバーが要求を受け付けませんでした（HTTP ${status}）。`,
+    server: ({ status }: { status: number }) =>
+      `サーバーでエラーが起きました（HTTP ${status}）。時間をおいてもう一度お試しください。`,
+    serverNoStatus: "サーバーでエラーが起きました。時間をおいてもう一度お試しください。",
+    unexpected: "画面で予期しないエラーが起きました。ページを再読み込みしてください。",
+  },
+  routeError: {
+    title: "ページを表示できませんでした",
+    loadAgain: "もう一度読み込む",
+    notFoundTitle: "ページが見つかりません",
+    notFoundBody: "このアドレスのページはありません。移動したか、削除された可能性があります。",
+  },
   language: {
     label: "言語",
     saveFailed: "言語を保存できませんでした。もう一度お試しください。",

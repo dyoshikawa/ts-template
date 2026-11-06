@@ -1,11 +1,19 @@
-import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  type ErrorComponentProps,
+  HeadContent,
+  Outlet,
+  Scripts,
+} from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 
 import { Header } from "../components/header";
 import { NavigationProgress } from "../components/navigation-progress";
 import { PullToReload } from "../components/pull-to-reload";
+import { RouteError } from "../components/route-error";
 import { Snackbar } from "../components/snackbar";
 import { I18nProvider, useI18n } from "../i18n/i18n-context";
+import { type Language } from "../i18n/language";
 import { APP_NAME } from "../lib/app";
 import { getRootContext } from "../lib/auth-functions";
 import { listenForInstallOffers } from "../lib/install";
@@ -46,6 +54,11 @@ export const Route = createRootRoute({
     ],
   }),
   component: RootComponent,
+  // The root's own failure (its session read runs on every navigation, so
+  // any navigation while offline) would otherwise put the bare error page in
+  // place of the whole document, losing the viewport meta (pinch zoom comes
+  // back), the styles' theme colors and `<html lang>`.
+  errorComponent: RootError,
 });
 
 function RootComponent() {
@@ -61,6 +74,25 @@ function RootComponent() {
         <Header session={session} />
         <Outlet />
         <Snackbar />
+      </RootDocument>
+    </I18nProvider>
+  );
+}
+
+/**
+ * The language of a page whose root context failed to load: the one the
+ * document was last rendered in (the server render's, kept by the browser),
+ * else the default.
+ */
+function documentLanguage(): Language {
+  return typeof document !== "undefined" && document.documentElement.lang === "en" ? "en" : "ja";
+}
+
+function RootError(props: ErrorComponentProps) {
+  return (
+    <I18nProvider language={documentLanguage()}>
+      <RootDocument>
+        <RouteError {...props} />
       </RootDocument>
     </I18nProvider>
   );
