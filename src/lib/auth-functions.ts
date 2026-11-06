@@ -8,7 +8,7 @@ import {
   languageFromCookie,
   requestLanguage,
 } from "../i18n/language";
-import { createAuth } from "./auth";
+import { readSession } from "./auth-server";
 
 /**
  * What every route needs before it renders, read once per navigation: the
@@ -19,7 +19,7 @@ import { createAuth } from "./auth";
  */
 export const getRootContext = createServerFn({ method: "GET" }).handler(async () => {
   const request = getRequest();
-  const found = await createAuth({ request }).api.getSession({ headers: request.headers });
+  const found = await readSession();
   const session = found
     ? {
         user: {
