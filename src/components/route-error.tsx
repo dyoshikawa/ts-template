@@ -24,8 +24,9 @@ export function RouteError({ error, reset }: ErrorComponentProps) {
   const loadAgain = async () => {
     setLoading(true);
     try {
-      reset();
+      // Reloads the matches and resets this boundary with them.
       await router.invalidate();
+      reset();
     } finally {
       setLoading(false);
     }

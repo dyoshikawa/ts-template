@@ -5,7 +5,7 @@ import {
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef, useSyncExternalStore } from "react";
 
 import { Header } from "../components/header";
 import { NavigationProgress } from "../components/navigation-progress";
@@ -64,7 +64,6 @@ export const Route = createRootRoute({
 function RootComponent() {
   const { session, language } = Route.useRouteContext();
   useServiceWorker();
-  useEffect(guardAgainstPageZoom, []);
 
   return (
     <I18nProvider language={language}>
@@ -80,29 +79,58 @@ function RootComponent() {
 }
 
 /**
- * The language of a page whose root context failed to load: the one the
- * document was last rendered in (the server render's, kept by the browser),
- * else the default.
+ * The language of a page whose root context failed to load, in the browser:
+ * the one the app was last shown in, or, when the server could not render
+ * the app at all (its document is the error shell), the browser's own.
  */
-function documentLanguage(): Language {
-  return typeof document !== "undefined" && document.documentElement.lang === "en" ? "en" : "ja";
+function browserFallbackLanguage(): Language {
+  const html = document.documentElement;
+  if (html.dataset.shell === "error") {
+    return navigator.languages.some((tag) => /^ja\b/iu.test(tag)) ? "ja" : "en";
+  }
+  return html.lang === "en" ? "en" : "ja";
+}
+
+/** Never changes while the page is open; there is nothing to subscribe to. */
+function subscribeNever(): () => void {
+  return () => {};
+}
+
+/**
+ * {@link browserFallbackLanguage}, read once per error page: the server
+ * render (which has no request language without the root context) and
+ * hydration use the default, then the browser's answer.
+ */
+function useFallbackLanguage(): Language {
+  const chosen = useRef<Language | null>(null);
+  return useSyncExternalStore(
+    subscribeNever,
+    () => (chosen.current ??= browserFallbackLanguage()),
+    () => "ja",
+  );
 }
 
 function RootError(props: ErrorComponentProps) {
+  const language = useFallbackLanguage();
   return (
-    <I18nProvider language={documentLanguage()}>
-      <RootDocument>
+    <I18nProvider language={language}>
+      <RootDocument shell="error">
         <RouteError {...props} />
       </RootDocument>
     </I18nProvider>
   );
 }
 
-function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+function RootDocument({
+  shell = "app",
+  children,
+}: Readonly<{ shell?: "app" | "error"; children: ReactNode }>) {
   // Follows a switch at once, before the server has saved it.
   const { language } = useI18n();
+  // In the document shell, so the error page keeps it too.
+  useEffect(guardAgainstPageZoom, []);
   return (
-    <html lang={language}>
+    <html lang={language} data-shell={shell}>
       <head>
         <HeadContent />
         {/* Written here rather than in `head()`: HeadContent keeps one meta per

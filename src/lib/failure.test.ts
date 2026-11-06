@@ -60,6 +60,21 @@ describe("classifyFailure", () => {
   });
 });
 
+describe("classifyFailure while the browser says it is offline", () => {
+  it("keeps a status the server answered with, and calls the rest offline", () => {
+    const onLine = Object.getOwnPropertyDescriptor(Navigator.prototype, "onLine");
+    Object.defineProperty(Navigator.prototype, "onLine", { configurable: true, get: () => false });
+    try {
+      expect(classifyFailure(new Response(null, { status: 401 }))).toEqual({ kind: "signedOut" });
+      expect(classifyFailure(new Error("boom"))).toEqual({ kind: "offline" });
+    } finally {
+      if (onLine) {
+        Object.defineProperty(Navigator.prototype, "onLine", onLine);
+      }
+    }
+  });
+});
+
 describe("failureText", () => {
   it("names the reset time of a rate limit in the page's language, rounded up", () => {
     const failure = { kind: "rateLimited", retryAt: Date.UTC(2026, 10, 6, 3, 4, 10) } as const;
