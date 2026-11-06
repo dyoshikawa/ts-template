@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "../i18n/i18n-context";
 import { type Language } from "../i18n/language";
@@ -46,6 +46,9 @@ function loadTurnstile(): Promise<TurnstileApi> {
       }
     });
     script.addEventListener("error", () => {
+      // Taken out, so the next widget fetches it again instead of waiting
+      // on a script that will never load.
+      script.remove();
       reject(new Error("Turnstile failed to load"));
     });
     if (!existing) {
@@ -82,6 +85,10 @@ export function Turnstile({
   const { status } = config;
   const container = useRef<HTMLDivElement>(null);
   const latestOnToken = useRef(onToken);
+  // Cloudflare's script could not be fetched (offline, blocked by an
+  // extension or a network filter): the guarded button would stay disabled
+  // with nothing on screen to say why.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     latestOnToken.current = onToken;
@@ -122,6 +129,9 @@ export function Turnstile({
         });
       })
       .catch(() => {
+        if (!cancelled) {
+          setLoadFailed(true);
+        }
         latestOnToken.current(null);
       });
     return () => {
@@ -142,5 +152,14 @@ export function Turnstile({
       </p>
     );
   }
-  return <div ref={container} className="min-h-16" />;
+  return (
+    <>
+      <div ref={container} className={loadFailed ? "" : "min-h-16"} />
+      {loadFailed ? (
+        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+          {t.turnstile.loadFailed}
+        </p>
+      ) : null}
+    </>
+  );
 }

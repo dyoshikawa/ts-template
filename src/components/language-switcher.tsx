@@ -1,5 +1,6 @@
 import { useI18n } from "../i18n/i18n-context";
 import { type Language, LANGUAGE_NAMES, LANGUAGES } from "../i18n/language";
+import { failureNotice } from "../lib/failure";
 import { showSnackbar } from "./snackbar";
 import { Emoji } from "./spinner";
 import { BUTTON_EMOJI } from "./ui";
@@ -12,15 +13,16 @@ import { BUTTON_EMOJI } from "./ui";
  * retry.
  */
 export function LanguageSwitcher({ className = "" }: { className?: string }) {
-  const { language, setLanguage, t } = useI18n();
+  const { language, setLanguage, t, locale } = useI18n();
 
   const choose = async (option: Language) => {
-    if (await setLanguage(option)) {
+    const failed = await setLanguage(option);
+    if (!failed) {
       return;
     }
     // Said in the language the page went back to, which `t` still is.
     showSnackbar({
-      text: t.language.saveFailed,
+      text: failureNotice({ action: t.language.saveFailed, error: failed.error, t, locale }),
       retry: () => {
         void choose(option);
       },

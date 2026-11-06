@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 
 import { useI18n } from "../i18n/i18n-context";
 import { type Messages } from "../i18n/messages";
+import { failureNotice } from "../lib/failure";
 import {
   type PushSupport,
   disableNotifications,
@@ -30,6 +31,13 @@ const BLOCKED_MESSAGES = {
   "no-worker": "noWorker",
 } as const satisfies Record<Exclude<PushSupport, "ready">, keyof Messages["notifications"]>;
 
+/** The sentence a failed action starts with. */
+const FAILED_MESSAGES = {
+  on: (t) => t.notifications.turnOnFailed,
+  off: (t) => t.notifications.turnOffFailed,
+  test: (t) => t.notifications.testFailed,
+} as const satisfies Record<Action, (t: Messages) => string>;
+
 /**
  * Turning push notifications on and off for this device, and sending a test
  * one. `vapidPublicKey` is empty while the server has no VAPID keys.
@@ -40,6 +48,23 @@ export function NotificationSettings({ vapidPublicKey }: { vapidPublicKey: strin
   // The action on its way: its button shows a spinner, every button waits.
   const [busy, setBusy] = useState<Action | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  /**
+   * `action`'s sentence followed by the kind of failure: the browser's push
+   * service (a DOMException from `subscribe`/`unsubscribe`) or the request
+   * (src/lib/failure.ts).
+   */
+  const failedBecause = (action: string, caught: unknown): string =>
+    caught instanceof DOMException && caught.name !== "TimeoutError"
+      ? t.failure.withKind({ action, kind: t.notifications.browserRefused({ name: caught.name }) })
+      : failureNotice({ action, error: caught, t, locale });
+
+  // Why the check on opening the page went wrong; read by the effect below
+  // without making a language switch check (and re-send) again.
+  const reportCheckFailure = useEffectEvent((step: "check" | "sync", caught: unknown) => {
+    const action = step === "sync" ? t.notifications.syncFailed : t.notifications.checkFailed;
+    setMessage(failedBecause(action, caught));
+  });
 
   useEffect(() => {
     if (vapidPublicKey === "") {
@@ -54,10 +79,19 @@ export function NotificationSettings({ vapidPublicKey }: { vapidPublicKey: strin
       if (Notification.permission === "denied") {
         return { name: "denied" };
       }
-      return (await resyncSubscription()) ? { name: "on" } : { name: "off" };
+      const { subscribed, saveError } = await resyncSubscription();
+      if (saveError !== undefined && !cancelled) {
+        reportCheckFailure("sync", saveError);
+      }
+      return subscribed ? { name: "on" } : { name: "off" };
     };
     check()
-      .catch((): State => ({ name: "off" }))
+      .catch((caught: unknown): State => {
+        if (!cancelled) {
+          reportCheckFailure("check", caught);
+        }
+        return { name: "off" };
+      })
       .then((next) => {
         if (!cancelled) {
           setState(next);
@@ -73,8 +107,8 @@ export function NotificationSettings({ vapidPublicKey }: { vapidPublicKey: strin
     setMessage(null);
     try {
       await action();
-    } catch {
-      setMessage(t.notifications.failed);
+    } catch (caught) {
+      setMessage(failedBecause(FAILED_MESSAGES[name](t), caught));
     } finally {
       setBusy(null);
     }

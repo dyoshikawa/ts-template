@@ -13,6 +13,7 @@ export const ja = {
     account: "アカウント",
     signIn: "サインイン",
     signOut: "サインアウト",
+    signOutFailed: "サインアウトできませんでした。",
     close: "閉じる",
     pullToReload: "引き下げて更新",
     releaseToReload: "離して更新",
@@ -22,10 +23,36 @@ export const ja = {
   },
   turnstile: {
     unavailable: "この操作は使えません。このサーバーでは確認の仕組みが設定されていません。",
+    loadFailed:
+      "ボットでないことの確認（Cloudflare Turnstile）を読み込めませんでした。オフラインか、拡張機能やネットワークがブロックしています。接続を確かめてからページを再読み込みしてください。",
+  },
+  failure: {
+    /** A failed action's sentence followed by its kind (Japanese runs them on without a space). */
+    withKind: ({ action, kind }: { action: string; kind: string }) => `${action}${kind}`,
+    offline: "サーバーに接続できませんでした。通信状況を確かめて、もう一度お試しください。",
+    timeout: "サーバーの応答が時間内にありませんでした。もう一度お試しください。",
+    rateLimited: "短い間に試しすぎました。少し待ってからもう一度お試しください。",
+    rateLimitedUntil: ({ time }: { time: string }) =>
+      `短い間に試しすぎました。${time} 以降にもう一度お試しください。`,
+    signedOut: "サインインが切れています。もう一度サインインしてください。",
+    forbidden: "この操作は許可されていません。",
+    notFound: "見つかりませんでした（削除された可能性があります）。",
+    refused: ({ status }: { status: number }) =>
+      `サーバーが要求を受け付けませんでした（HTTP ${status}）。`,
+    server: ({ status }: { status: number }) =>
+      `サーバーでエラーが起きました（HTTP ${status}）。時間をおいてもう一度お試しください。`,
+    serverNoStatus: "サーバーでエラーが起きました。時間をおいてもう一度お試しください。",
+    unexpected: "画面で予期しないエラーが起きました。ページを再読み込みしてください。",
+  },
+  routeError: {
+    title: "ページを表示できませんでした",
+    loadAgain: "もう一度読み込む",
+    notFoundTitle: "ページが見つかりません",
+    notFoundBody: "このアドレスのページはありません。移動したか、削除された可能性があります。",
   },
   language: {
     label: "言語",
-    saveFailed: "言語を保存できませんでした。もう一度お試しください。",
+    saveFailed: "言語を保存できませんでした。",
   },
   home: {
     signedIn: {
@@ -59,13 +86,13 @@ export const ja = {
     passkeyButton: "パスキーでサインイン",
     passkeyNote: "パスキーは、メールアドレスでサインインした後にアカウントページから追加できます。",
     errors: {
-      sendFailed: "コードを送信できませんでした。もう一度お試しください。",
+      sendFailed: "コードを送信できませんでした。",
+      verifyRequestFailed: "コードを確かめられませんでした。",
       verifyFailed: "コードが正しくありません。もう一度お試しください。",
       expired:
         "コードの有効期限が切れました。メールアドレスの入力に戻って新しいコードを送ってください。",
       tooManyAttempts:
         "間違いが多すぎたため、このコードは使えなくなりました。メールアドレスの入力に戻って新しいコードを送ってください。",
-      rateLimited: "試行が多すぎます。少し待ってからもう一度お試しください。",
       notAllowed: "このメールアドレスではサインインできません。",
       unavailable: "現在サインインできません。確認の仕組みが設定されていません。",
       checkFailed: "確認に失敗しました。もう一度お試しください。",
@@ -86,17 +113,19 @@ export const ja = {
     deleteConfirm: ({ label }: { label: string }) =>
       `「${label}」を削除しますか？このパスキーではサインインできなくなります。`,
     deleted: ({ label }: { label: string }) => `「${label}」を削除しました。`,
-    deleteFailed: "パスキーを削除できませんでした。もう一度お試しください。",
+    deleteFailed: "パスキーを削除できませんでした。",
     needsFreshSignIn:
       "安全のため、パスキーはメールのコードでサインインしてから1日以内にしか追加できません。サインアウトしてメールアドレスでサインインし直してから追加してください。",
     errors: {
       alreadyRegistered: "このパスキーはすでに登録されています。",
-      addFailed: "パスキーを追加できませんでした。もう一度お試しください。",
+      addFailed: "パスキーを追加できませんでした。",
+      browser: ({ code }: { code: string }) =>
+        `このブラウザーまたは端末がパスキーの操作を受け付けませんでした（${code}）。`,
       notFound:
         "このパスキーは登録されていません（削除された可能性があります）。メールアドレスでサインインしてください。",
       forbidden: "このアカウントではサインインできません。",
-      signInFailed:
-        "パスキーでサインインできませんでした。メールアドレスでサインインすることもできます。",
+      signInFailed: "パスキーでサインインできませんでした。",
+      emailInstead: "メールアドレスでサインインすることもできます。",
     },
     offer: {
       title: "次回はパスキーでサインインしますか？",
@@ -119,7 +148,7 @@ export const ja = {
       body: "アカウントを閉じると、アカウントとそのすべてのデータがすぐに削除されます。削除したデータは元に戻せません。",
       understand: "すべてのデータが削除され、元に戻せないことを理解しました",
       button: "アカウントを閉じてすべてのデータを削除",
-      failed: "アカウントを閉じられませんでした。ページを再読み込みしてもう一度お試しください。",
+      failed: "アカウントを閉じられませんでした。",
     },
   },
   notifications: {
@@ -138,7 +167,13 @@ export const ja = {
     onNote: "この端末の通知はオンです。",
     sendTest: "テスト通知を送る",
     turnOff: "通知をオフにする",
-    failed: "問題が発生しました。ページを再読み込みしてもう一度お試しください。",
+    turnOnFailed: "通知をオンにできませんでした。",
+    turnOffFailed: "通知をオフにできませんでした。",
+    testFailed: "テスト通知を送れませんでした。",
+    checkFailed: "この端末の通知の状態を確かめられませんでした。",
+    syncFailed: "この端末の通知の登録をサーバーに送り直せませんでした。",
+    browserRefused: ({ name }: { name: string }) =>
+      `ブラウザーのプッシュ通知の仕組みが応じませんでした（${name}）。`,
     rateLimited: "テスト通知が多すぎます。1分ほど待ってからもう一度お試しください。",
     sent: ({ count }: { count: string; plural: Intl.LDMLPluralRule }) =>
       `${count} 台の端末に送りました。`,

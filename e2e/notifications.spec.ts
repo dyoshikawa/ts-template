@@ -57,3 +57,54 @@ test("turns notifications on and off from the account page", async ({ page, emai
   await notifications.getByRole("button", { name: "通知をオフにする" }).click();
   await expect(notifications.getByRole("button", { name: "通知をオンにする" })).toBeVisible();
 });
+
+test("a failure to turn notifications on or to test them says what kind it was", async ({
+  page,
+  email,
+}) => {
+  await signIn({ page, email });
+  await page.goto("/account");
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  const notifications = page.getByRole("region", { name: "通知" });
+  const message = notifications.getByRole("status");
+
+  // The server cannot store the subscription.
+  let answer: "fail" | "offline" | "pass" = "fail";
+  await page.route("**/_serverFn/**", async (route) => {
+    if (route.request().method() !== "POST" || answer === "pass") {
+      await route.continue();
+    } else if (answer === "offline") {
+      await route.abort("failed");
+    } else {
+      await route.fulfill({ status: 500, contentType: "text/plain", body: "boom" });
+    }
+  });
+  const turnOn = notifications.getByRole("button", { name: "通知をオンにする" });
+  await turnOn.click();
+  await expect(message).toHaveText(/^通知をオンにできませんでした。サーバーでエラーが起きました/u);
+
+  // The browser's push service turns the subscription down.
+  await page.evaluate(() => {
+    Object.assign(PushManager.prototype, {
+      getSubscription: async () => null,
+      subscribe: async () => {
+        throw new DOMException("Registration failed - push service error", "AbortError");
+      },
+    });
+  });
+  await turnOn.click();
+  await expect(message).toHaveText(
+    /^通知をオンにできませんでした。ブラウザーのプッシュ通知の仕組みが応じませんでした（AbortError）/u,
+  );
+  await page.reload();
+
+  answer = "pass";
+  await turnOn.click();
+  await expect(notifications.getByText("この端末の通知はオンです。")).toBeVisible();
+  answer = "offline";
+  await notifications.getByRole("button", { name: "テスト通知を送る" }).click();
+  await expect(message).toHaveText(
+    /^テスト通知を送れませんでした。サーバーに接続できませんでした/u,
+  );
+});

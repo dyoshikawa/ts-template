@@ -139,6 +139,40 @@ test("the email field's passkey suggestion signs in", async ({ page, email }) =>
   await expect(page.getByRole("link", { name: email })).toBeVisible();
 });
 
+test("a passkey that cannot be deleted says why, and stays listed", async ({ page, email }) => {
+  await addVirtualAuthenticator(page);
+  await signIn({ page, email });
+  await page.getByRole("button", { name: "パスキーを追加" }).click();
+  await expect(page.getByRole("heading", { name: "パスキーを追加しました" })).toBeVisible();
+  await page.goto("/account");
+  await page.route("**/api/auth/passkey/delete-passkey", (route) => route.abort("failed"));
+  page.once("dialog", (dialog) => {
+    void dialog.accept();
+  });
+  const remove = page.getByRole("button", { name: `「${LABEL}」を削除` });
+  await remove.click();
+  await expect(
+    page.getByText(/^パスキーを削除できませんでした。サーバーに接続できませんでした/u),
+  ).toBeVisible();
+  await expect(remove).toBeEnabled();
+  await expect(page.getByText(LABEL)).toBeVisible();
+});
+
+test("a browser that turns the email field's suggestions down shows no passkey failure", async ({
+  page,
+}) => {
+  // Headless Chromium without an authenticator refuses conditional requests
+  // with NotSupportedError before anyone has picked anything, as some
+  // browsers do: nothing was tried, so nothing failed.
+  const challenges = countChallenges(page);
+  await page.goto("/login");
+  await expect.poll(challenges).toBeGreaterThanOrEqual(1);
+  await page.waitForTimeout(1500);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  // And the page stops asking rather than retrying a request that cannot work.
+  expect(challenges()).toBe(1);
+});
+
 test('"今はしない" stops the offer on this device', async ({ page, email }) => {
   await addVirtualAuthenticator(page);
   await signIn({ page, email });

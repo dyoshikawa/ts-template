@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 
-import { type Page } from "@playwright/test";
+import { type Page, type Route } from "@playwright/test";
 
 import { expect, signIn, test } from "./fixtures";
 
@@ -170,6 +170,54 @@ test("a failed request clears the spinner and says so where the user acted", asy
   await expect(send.locator("[data-spinner]")).toHaveCount(0);
 });
 
+test("a sign-in code that cannot reach the server says so instead of spinning forever", async ({
+  page,
+  email,
+}) => {
+  await page.goto("/login");
+  await page.route(
+    (url) => url.pathname.endsWith("/email-otp/send-verification-otp"),
+    (route) => route.abort("failed"),
+  );
+  await page.getByRole("textbox", { name: "メールアドレス" }).fill(email);
+  const send = page.getByRole("button", { name: "コードを送信" });
+  await send.click();
+  await expect(page.getByRole("alert")).toContainText("コードを送信できませんでした");
+  await expect(send.locator("[data-spinner]")).toHaveCount(0);
+  // The used Turnstile token was replaced, so the code can be asked for again.
+  await expect(send).toBeEnabled();
+});
+
+test("a refused or unsent sign-in code says what kind of failure it was", async ({
+  page,
+  email,
+}) => {
+  await page.goto("/login");
+  let answer: "rate-limited" | "offline" = "rate-limited";
+  await page.route(
+    (url) => url.pathname.endsWith("/email-otp/send-verification-otp"),
+    (route) =>
+      answer === "offline"
+        ? route.abort("failed")
+        : route.fulfill({
+            status: 429,
+            headers: { "X-Retry-After": "120" },
+            json: { message: "Too many requests. Please try again later." },
+          }),
+  );
+  await page.getByRole("textbox", { name: "メールアドレス" }).fill(email);
+  const send = page.getByRole("button", { name: "コードを送信" });
+  const alert = page.getByRole("alert");
+  await send.click();
+  // Better Auth's rate limiter says how long to wait; the message says until when.
+  await expect(alert).toContainText(/\d{1,2}:\d{2} 以降にもう一度お試しください/u);
+  answer = "offline";
+  await send.click();
+  await expect(alert).toHaveText(
+    "コードを送信できませんでした。サーバーに接続できませんでした。通信状況を確かめて、もう一度お試しください。",
+  );
+});
+
 test("a slow page load shows a bar along the top and blocks nothing", async ({ page }) => {
   await page.goto("/");
   const signInLink = page.getByRole("main").getByRole("link", { name: "サインイン" });
@@ -197,6 +245,28 @@ test("signing out keeps the menu open with a spinner until the session is gone",
   await expect(signOut).toBeDisabled();
   await expect(signOut.locator("[data-spinner]")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "ts-template" })).toBeHidden();
+  await expect(page.getByRole("link", { name: email })).toHaveCount(0);
+});
+
+test("a sign-out that cannot reach the server says so and keeps the menu open", async ({
+  page,
+  email,
+}) => {
+  await signIn({ page, email });
+  await page.route("**/api/auth/sign-out", (route) => route.abort("failed"));
+  await page.getByRole("button", { name: "メニュー", exact: true }).click();
+  const menu = page.getByRole("navigation", { name: "ts-template" });
+  const signOut = menu.getByRole("button", { name: "サインアウト", exact: true });
+  await signOut.click();
+  await expect(menu.getByRole("alert")).toHaveText(
+    /^サインアウトできませんでした。サーバーに接続できませんでした/u,
+  );
+  await expect(signOut).toBeEnabled();
+  await expect(page.getByRole("link", { name: email })).toBeVisible();
+
+  await page.unrouteAll();
+  await signOut.click();
+  await expect(menu).toBeHidden();
   await expect(page.getByRole("link", { name: email })).toHaveCount(0);
 });
 
@@ -389,4 +459,88 @@ test("the pull indicator winds up, turns ready, spins on release and springs bac
   await pullTo(0);
   await touch("touchEnd");
   await expect(indicator).toHaveAttribute("data-state", "idle");
+});
+
+test("an address no page answers to says so in the page's language", async ({ page }) => {
+  await page.goto("/nowhere");
+  await expect(page.getByRole("heading", { name: "ページが見つかりません" })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "ホーム" })).toBeVisible();
+  await expect(page.getByText("Not Found")).toHaveCount(0);
+});
+
+/**
+ * Fails the server-function calls of the next navigation's loader with
+ * `answer`, letting the first one (the root's session read) through, until
+ * the returned function is called.
+ */
+async function failLoader(page: Page, answer: Parameters<Route["fulfill"]>[0]) {
+  let calls = 0;
+  let failing = true;
+  await page.route("**/_serverFn/**", async (route) => {
+    calls += 1;
+    if (failing && calls > 1) {
+      await route.fulfill(answer);
+    } else {
+      await route.continue();
+    }
+  });
+  return () => {
+    failing = false;
+  };
+}
+
+test("a page whose data fails to load says it was the server, and loads again", async ({
+  page,
+  email,
+}) => {
+  await signIn({ page, email });
+  const stop = await failLoader(page, { status: 500, contentType: "text/plain", body: "boom" });
+  await page.getByRole("main").getByRole("link", { name: "アカウントページ" }).click();
+  await expect(page.getByRole("heading", { name: "ページを表示できませんでした" })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("サーバーでエラーが起きました");
+  await expect(page.getByText("Something went wrong")).toHaveCount(0);
+  stop();
+  await page.getByRole("button", { name: "もう一度読み込む" }).click();
+  await expect(page.getByRole("heading", { name: "アカウント", exact: true })).toBeVisible();
+});
+
+test("a server function's thrown Response shows its status and kind", async ({ page, email }) => {
+  await signIn({ page, email });
+  // TanStack Start rethrows a thrown Response in the browser when it carries
+  // this header, which is how a server function's refusal arrives.
+  await failLoader(page, {
+    status: 503,
+    headers: { "x-tss-raw": "thrown", "content-type": "text/plain" },
+    body: "down",
+  });
+  await page.getByRole("main").getByRole("link", { name: "アカウントページ" }).click();
+  await expect(page.getByRole("alert")).toContainText("HTTP 503");
+});
+
+test("a navigation while offline keeps the page whole and says it was the connection", async ({
+  page,
+  email,
+}) => {
+  await signIn({ page, email });
+  // Every navigation reads the session first; the root's failure used to
+  // replace the whole document, viewport meta and all.
+  await page.route("**/_serverFn/**", (route) => route.abort("failed"));
+  await page.getByRole("main").getByRole("link", { name: "アカウントページ" }).click();
+  await expect(page.getByRole("alert")).toContainText("サーバーに接続できませんでした");
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+    "content",
+    /user-scalable=no/u,
+  );
+  await expect(page.locator("html")).toHaveAttribute("lang", "ja");
+  // iOS ignores the meta, so the gesture guard must outlive the app's shell too.
+  expect(
+    await page.evaluate(() => {
+      const gesture = new Event("gesturestart", { cancelable: true });
+      document.dispatchEvent(gesture);
+      return gesture.defaultPrevented;
+    }),
+  ).toBe(true);
+  await page.unrouteAll();
+  await page.getByRole("button", { name: "もう一度読み込む" }).click();
+  await expect(page.getByRole("heading", { name: "アカウント", exact: true })).toBeVisible();
 });
