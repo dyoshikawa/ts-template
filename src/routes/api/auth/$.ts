@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { createAuth } from "../../../lib/auth";
-
 /**
- * Better Auth's endpoints, passkeys included. The passkey plugin is loaded
- * here on demand, so it stays off the cold start of every other request.
+ * Better Auth's endpoints, passkeys included. Better Auth and the passkey
+ * plugin are loaded here on demand: server routes are part of the route tree
+ * every page loads, so a static import would put them on the cold start of
+ * every other request.
  */
 const handle = async ({ request }: { request: Request }) => {
-  const { passkeyPlugins } = await import("../../../lib/auth-passkey");
+  const [{ createAuth }, { passkeyPlugins }] = await Promise.all([
+    import("../../../lib/auth"),
+    import("../../../lib/auth-passkey"),
+  ]);
   return createAuth({ request, passkeys: passkeyPlugins({ request }) }).handler(request);
 };
 

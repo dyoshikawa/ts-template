@@ -1,8 +1,24 @@
 import { getRequest } from "@tanstack/react-start/server";
 
-import { createAuth } from "./auth";
+import { hasSessionCookie } from "./session-cookie";
 
-type SessionResult = Awaited<ReturnType<ReturnType<typeof createAuth>["api"]["getSession"]>>;
+// Better Auth (about 1 MB of the Worker's code) is imported on first use, not
+// with this module: a signed-out visitor's page never needs it (see
+// `readSession`), so a cold start serving one does not evaluate it.
+type CreateAuth = (typeof import("./auth"))["createAuth"];
+type SessionResult = Awaited<ReturnType<ReturnType<CreateAuth>["api"]["getSession"]>>;
+
+async function loadCreateAuth(): Promise<CreateAuth> {
+  return (await import("./auth")).createAuth;
+}
+
+async function lookUpSession(request: Request): Promise<SessionResult> {
+  if (!hasSessionCookie(request.headers.get("cookie"))) {
+    return null;
+  }
+  const createAuth = await loadCreateAuth();
+  return createAuth({ request }).api.getSession({ headers: request.headers });
+}
 
 const sessions = new WeakMap<Request, Promise<SessionResult>>();
 
@@ -11,14 +27,16 @@ const sessions = new WeakMap<Request, Promise<SessionResult>>();
  * renders on the server, the root route and every loader's server function
  * see the same Request, so the page builds Better Auth and looks the session
  * up (two D1 queries once the cookie cache has lapsed) once instead of once
- * per server function. Code that must skip the cookie cache (see
- * `refreshSessionCache`, `deleteAccount`) asks Better Auth directly.
+ * per server function. Without a session cookie the answer is `null`
+ * without loading Better Auth, as Better Auth itself would answer. Code that
+ * must skip the cookie cache (see `refreshSessionCache`, `deleteAccount`)
+ * asks Better Auth directly.
  */
 export function readSession(): Promise<SessionResult> {
   const request = getRequest();
   let session = sessions.get(request);
   if (session === undefined) {
-    session = createAuth({ request }).api.getSession({ headers: request.headers });
+    session = lookUpSession(request);
     sessions.set(request, session);
   }
   return session;
@@ -44,6 +62,7 @@ export async function requireUserId(): Promise<string> {
  */
 export async function refreshSessionCache(): Promise<void> {
   const request = getRequest();
+  const createAuth = await loadCreateAuth();
   await createAuth({ request }).api.getSession({
     headers: request.headers,
     query: { disableCookieCache: true },
