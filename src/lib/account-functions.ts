@@ -6,7 +6,7 @@ import * as z from "zod/mini";
 
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
-import { readSession } from "./auth-server";
+import { loadCreateAuth, readSession } from "./auth-server";
 import { otpIdentifiers } from "./otp-identifiers";
 import { passkeyConfig } from "./passkey";
 import {
@@ -75,10 +75,9 @@ export const deleteAccount = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const request = getRequest();
-    // Imported here, so the sign-in page's server functions in this file do
+    // Loaded here, so the sign-in page's server functions in this file do
     // not load Better Auth (see `readSession`).
-    const { createAuth } = await import("./auth");
-    const auth = createAuth({ request });
+    const auth = (await loadCreateAuth())({ request });
     // Read from the database, not the 5-minute cookie cache: a session signed
     // out or revoked elsewhere must not delete the account.
     const session = await auth.api.getSession({
