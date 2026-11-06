@@ -23,6 +23,8 @@ export const ja = {
   },
   turnstile: {
     unavailable: "この操作は使えません。このサーバーでは確認の仕組みが設定されていません。",
+    loadFailed:
+      "ボットでないことの確認（Cloudflare Turnstile）を読み込めませんでした。オフラインか、拡張機能やネットワークがブロックしています。接続を確かめてからページを再読み込みしてください。",
   },
   failure: {
     /** A failed action's sentence followed by its kind (Japanese runs them on without a space). */
