@@ -23,6 +23,13 @@ updates:
       - "dyoshikawa"
     allow:
       - dependency-type: "all"
+    ignore:
+      # Pinned to a 2.0 beta (the only line without wrangler that writes the
+      # Build Output `cf deploy` reads). A beta can change the Build Output or
+      # the config API and must bundle the same @cloudflare/config as `cf`, so
+      # it is bumped by hand together with `cf` (check `pnpm cf:dry-run` and
+      # the browser tests). Drop this once 2.0 is stable.
+      - dependency-name: "@cloudflare/vite-plugin"
 
   # Automatic updates for GitHub Actions
   - package-ecosystem: "github-actions"
