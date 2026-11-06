@@ -43,7 +43,7 @@ export const en: Messages = {
   },
   language: {
     label: "Language",
-    saveFailed: "Could not save the language. Please try again.",
+    saveFailed: "Could not save the language.",
   },
   home: {
     signedIn: {

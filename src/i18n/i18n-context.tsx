@@ -12,10 +12,10 @@ type I18n = {
   /** The `Intl` locale, for dates and numbers. */
   locale: string;
   /**
-   * Switches the language at once and saves the choice; resolves false
-   * (back to the previous language) when it could not be saved.
+   * Switches the language at once and saves the choice; resolves with why
+   * (back to the previous language) when it could not be saved, else `null`.
    */
-  setLanguage: (language: Language) => Promise<boolean>;
+  setLanguage: (language: Language) => Promise<{ error: unknown } | null>;
 };
 
 const I18nContext = createContext<I18n | null>(null);
@@ -42,12 +42,13 @@ export function I18nProvider({
       setOverride({ over: resolved, to: next });
       try {
         await setLanguagePreference({ data: { language: next } });
-        await router.invalidate();
-        return true;
-      } catch {
+      } catch (error) {
         setOverride(null);
-        return false;
+        return { error };
       }
+      // Saved: a failed reload only delays the server's catching up.
+      await router.invalidate().catch(() => undefined);
+      return null;
     },
     [resolved, router],
   );
@@ -67,7 +68,7 @@ const STANDALONE: I18n = {
   language: "ja",
   t: messagesFor("ja"),
   locale: localeOf("ja"),
-  setLanguage: async () => false,
+  setLanguage: async () => ({ error: new Error("No I18nProvider") }),
 };
 
 export function useI18n(): I18n {
