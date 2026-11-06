@@ -8,7 +8,8 @@ import { hasSessionCookie } from "./session-cookie";
 type CreateAuth = (typeof import("./auth"))["createAuth"];
 type SessionResult = Awaited<ReturnType<ReturnType<CreateAuth>["api"]["getSession"]>>;
 
-async function loadCreateAuth(): Promise<CreateAuth> {
+/** Better Auth's `createAuth`, imported on first use (see above). */
+export async function loadCreateAuth(): Promise<CreateAuth> {
   return (await import("./auth")).createAuth;
 }
 
@@ -38,6 +39,8 @@ export function readSession(): Promise<SessionResult> {
   if (session === undefined) {
     session = lookUpSession(request);
     sessions.set(request, session);
+    // A failed lookup (a D1 hiccup) is not kept: the next caller tries again.
+    session.catch(() => sessions.delete(request));
   }
   return session;
 }

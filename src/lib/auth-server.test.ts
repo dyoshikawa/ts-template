@@ -44,6 +44,14 @@ describe("readSession", () => {
     expect(createAuth).not.toHaveBeenCalled();
   });
 
+  it("does not keep a failed lookup", async () => {
+    current = signedIn();
+    getSession.mockRejectedValueOnce(new Error("D1 unavailable"));
+    await expect(readSession()).rejects.toThrow("D1 unavailable");
+    expect(await requireUserId()).toBe("user-1");
+    expect(getSession).toHaveBeenCalledTimes(2);
+  });
+
   it("refuses a request without a session", async () => {
     current = signedIn();
     getSession.mockResolvedValue(null);
