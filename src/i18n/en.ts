@@ -75,12 +75,12 @@ export const en: Messages = {
     passkeyButton: "Sign in with a passkey",
     passkeyNote: "Add a passkey from your account page after signing in with your email address.",
     errors: {
-      sendFailed: "Could not send the code. Please try again.",
+      sendFailed: "Could not send the code.",
+      verifyRequestFailed: "Could not check the code.",
       verifyFailed: "That code is not right. Please try again.",
       expired: "The code has expired. Go back to the email step to send a new one.",
       tooManyAttempts:
         "Too many wrong tries: this code no longer works. Go back to the email step to send a new one.",
-      rateLimited: "Too many tries. Wait a moment and try again.",
       notAllowed: "This email address cannot sign in.",
       unavailable: "Sign-in is not available: the verification check is not set up.",
       checkFailed: "The check failed. Please try again.",
@@ -101,17 +101,18 @@ export const en: Messages = {
     deleteConfirm: ({ label }) =>
       `Delete "${label}"? You will no longer be able to sign in with it.`,
     deleted: ({ label }) => `Deleted "${label}".`,
-    deleteFailed: "Could not delete the passkey. Please try again.",
+    deleteFailed: "Could not delete the passkey.",
     needsFreshSignIn:
       "For your security, passkeys can only be added within a day of signing in with an email code. Sign out, sign in again with your email address, then add the passkey.",
     errors: {
       alreadyRegistered: "This passkey is already registered.",
-      addFailed: "Could not add the passkey. Please try again.",
+      addFailed: "Could not add the passkey.",
+      browser: ({ code }) => `This browser or device turned the passkey request down (${code}).`,
       notFound:
         "This passkey is not registered (it may have been deleted). Sign in with your email address instead.",
       forbidden: "This account cannot sign in.",
-      signInFailed:
-        "Could not sign in with the passkey. You can sign in with your email address instead.",
+      signInFailed: "Could not sign in with the passkey.",
+      emailInstead: "You can sign in with your email address instead.",
     },
     offer: {
       title: "Sign in with a passkey next time?",

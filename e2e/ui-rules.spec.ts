@@ -188,6 +188,36 @@ test("a sign-in code that cannot reach the server says so instead of spinning fo
   await expect(send).toBeEnabled();
 });
 
+test("a refused or unsent sign-in code says what kind of failure it was", async ({
+  page,
+  email,
+}) => {
+  await page.goto("/login");
+  let answer: "rate-limited" | "offline" = "rate-limited";
+  await page.route(
+    (url) => url.pathname.endsWith("/email-otp/send-verification-otp"),
+    (route) =>
+      answer === "offline"
+        ? route.abort("failed")
+        : route.fulfill({
+            status: 429,
+            headers: { "X-Retry-After": "120" },
+            json: { message: "Too many requests. Please try again later." },
+          }),
+  );
+  await page.getByRole("textbox", { name: "メールアドレス" }).fill(email);
+  const send = page.getByRole("button", { name: "コードを送信" });
+  const alert = page.getByRole("alert");
+  await send.click();
+  // Better Auth's rate limiter says how long to wait; the message says until when.
+  await expect(alert).toContainText(/\d{1,2}:\d{2} 以降にもう一度お試しください/u);
+  answer = "offline";
+  await send.click();
+  await expect(alert).toHaveText(
+    "コードを送信できませんでした。サーバーに接続できませんでした。通信状況を確かめて、もう一度お試しください。",
+  );
+});
+
 test("a slow page load shows a bar along the top and blocks nothing", async ({ page }) => {
   await page.goto("/");
   const signInLink = page.getByRole("main").getByRole("link", { name: "サインイン" });

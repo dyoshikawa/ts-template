@@ -9,12 +9,14 @@ import { BUTTON_EMOJI, dangerButtonClass, secondaryButtonClass } from "../compon
 import { useI18n } from "../i18n/i18n-context";
 import { pageTitle } from "../i18n/page-title";
 import { deleteAccount, getTurnstileConfig, listPasskeys } from "../lib/account-functions";
+import { failureNotice } from "../lib/failure";
 import { loadAuthClient, preloadAuthClient } from "../lib/load-auth-client";
 import { addPasskey } from "../lib/passkey-actions";
 import { usePasskeysSupported } from "../lib/passkey-browser";
 import { passkeyLabel } from "../lib/passkey-name";
 import { disableNotifications } from "../lib/push-client";
 import { getPushConfig } from "../lib/push-functions";
+import { UNREACHABLE } from "../lib/unreachable";
 
 export const Route = createFileRoute("/account")({
   beforeLoad: ({ context }) => {
@@ -170,7 +172,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
   const add = async () => {
     setBusy({ action: "add" });
     setStatus(null);
-    const result = await addPasskey({ t });
+    const result = await addPasskey({ t, locale });
     if (result.status === "ok") {
       await router.invalidate();
       setStatus({ ok: true, text: t.passkeys.addedOk });
@@ -188,11 +190,16 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
     setBusy({ action: "delete", id: passkey.id });
     setStatus(null);
     const authClient = await loadAuthClient();
+    // Without the client (its chunk could not be fetched) it reads like a
+    // request that never left, which it is.
     const { error } = authClient
       ? await authClient.passkey.deletePasskey({ id: passkey.id })
-      : { error: true };
+      : { error: { status: 503, code: UNREACHABLE } };
     if (error) {
-      setStatus({ ok: false, text: t.passkeys.deleteFailed });
+      setStatus({
+        ok: false,
+        text: failureNotice({ action: t.passkeys.deleteFailed, error, t, locale }),
+      });
     } else {
       await router.invalidate();
       setStatus({ ok: true, text: t.passkeys.deleted({ label }) });
