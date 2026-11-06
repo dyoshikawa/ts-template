@@ -136,6 +136,14 @@ function LoginPage() {
       if (!autoFill) {
         setBusy(null);
       }
+      // The browser threw something other than a WebAuthn error at the
+      // suggestions themselves (headless Chromium and some WebViews answer
+      // NotSupportedError before anyone picked anything): nothing was tried,
+      // so nothing is shown, and the field stops offering them.
+      if (autoFill && "code" in passkeyError && passkeyError.code === "AUTH_CANCELLED") {
+        setAutoFillRounds(({ round }) => ({ round, failures: MAX_AUTO_FILL_FAILURES }));
+        return;
+      }
       const message = passkeySignInErrorMessage({ error: passkeyError, t });
       if (message) {
         setError(message);

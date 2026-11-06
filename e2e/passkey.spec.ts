@@ -139,6 +139,21 @@ test("the email field's passkey suggestion signs in", async ({ page, email }) =>
   await expect(page.getByRole("link", { name: email })).toBeVisible();
 });
 
+test("a browser that turns the email field's suggestions down shows no passkey failure", async ({
+  page,
+}) => {
+  // Headless Chromium without an authenticator refuses conditional requests
+  // with NotSupportedError before anyone has picked anything, as some
+  // browsers do: nothing was tried, so nothing failed.
+  const challenges = countChallenges(page);
+  await page.goto("/login");
+  await expect.poll(challenges).toBeGreaterThanOrEqual(1);
+  await page.waitForTimeout(1500);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  // And the page stops asking rather than retrying a request that cannot work.
+  expect(challenges()).toBe(1);
+});
+
 test('"今はしない" stops the offer on this device', async ({ page, email }) => {
   await addVirtualAuthenticator(page);
   await signIn({ page, email });
