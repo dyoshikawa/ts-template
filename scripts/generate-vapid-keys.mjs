@@ -1,8 +1,9 @@
 // Prints a new VAPID key pair for push notifications (`pnpm vapid`):
 //
-// - VAPID_PUBLIC_KEY goes in wrangler.jsonc `vars` (browsers subscribe with it);
-// - VAPID_PRIVATE_KEY is a secret: `wrangler secret put VAPID_PRIVATE_KEY`,
-//   and `.dev.vars` for local runs.
+// - VAPID_PUBLIC_KEY goes in cloudflare.config.ts (browsers subscribe with it);
+// - VAPID_PRIVATE_KEY is a secret: `pnpm exec cf workers secrets update
+//   VAPID_PRIVATE_KEY --worker <name> --type secret_text --text "<key>"`, and
+//   `.dev.vars` for local runs.
 //
 // Changing the pair later invalidates every existing subscription: browsers
 // have to subscribe again.

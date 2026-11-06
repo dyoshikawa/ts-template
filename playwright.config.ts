@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * Where the emulator serves the built Worker for the tests; `E2E_PORT` moves
- * it off a busy port, and `E2E_INSPECTOR_PORT` moves wrangler's inspector off
+ * it off a busy port, and `E2E_INSPECTOR_PORT` moves the emulator's inspector off
  * 9229 the same way.
  */
 const PORT = Number(process.env.E2E_PORT ?? 4173);
@@ -40,11 +40,11 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `node scripts/cf-dev.mjs --vars .dev.vars.e2e --state .wrangler/state-e2e --fresh --port ${PORT}${INSPECTOR}`,
+    command: `node scripts/cf-dev.mjs --vars .dev.vars.e2e --state .cloudflare/state-e2e --fresh --port ${PORT}${INSPECTOR}`,
     url: `${BASE_URL}/login`,
     reuseExistingServer: false,
     timeout: 180_000,
-    // SIGTERM first, so wrangler stops workerd itself: on the CI runner the
+    // SIGTERM first, so the emulator stops workerd itself: on the CI runner the
     // default kill left the run waiting on the emulator after the last test
     // until the global timeout.
     gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },

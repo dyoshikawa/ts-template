@@ -21,8 +21,7 @@
     ".gitignore",
     ".rulesync/**",
     "src/routeTree.gen.ts",
-    "drizzle/**",
-    "worker-configuration.d.ts"
+    "drizzle/**"
   ],
   "words": [
     "AAGUID",

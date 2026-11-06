@@ -55,7 +55,7 @@ an installable PWA and Web Push notifications — on the toolchain used by
 | ----------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | Framework         | [TanStack Start](https://tanstack.com/start) + [React](https://react.dev/)                                     | `vite.config.ts`, `src/router.tsx`, `src/routes/`           |
 | Styling           | [Tailwind CSS v4](https://tailwindcss.com/)                                                                    | `src/styles.css`                                            |
-| Hosting           | [Cloudflare Workers](https://developers.cloudflare.com/workers/) (D1, Email Service, Rate Limiting, Turnstile) | `wrangler.jsonc`, `src/server.ts`                           |
+| Hosting           | [Cloudflare Workers](https://developers.cloudflare.com/workers/) (D1, Email Service, Rate Limiting, Turnstile) | `cloudflare.config.ts`, `src/server.ts`                     |
 | Auth              | [Better Auth](https://www.better-auth.com/) (email OTP, passkeys)                                              | `src/lib/auth.ts`                                           |
 | Database          | [Drizzle ORM](https://orm.drizzle.team/) on D1                                                                 | `src/db/schema.ts`, `drizzle/`, `drizzle.config.ts`         |
 | Runtime / tooling | [mise](https://mise.jdx.dev/)                                                                                  | `mise.toml`                                                 |
@@ -99,8 +99,9 @@ Then rename the project:
 
 1. `package.json` — `name`, `description`, `keywords`, `homepage`, `bugs`, `repository`
 2. `src/lib/app.ts` — `APP_NAME`
-3. `wrangler.jsonc` and `cloudflare.config.ts` — `name`, `database_name` (the `DB` binding's `name` in `cloudflare.config.ts`), and the `vars` (`wrangler.example.jsonc` shows a filled-in one;
-   `PASSKEY_RP_ID` stays empty until the app has a custom domain)
+3. `cloudflare.config.ts` — the Worker's `name` and the `DB` binding's `name` (the comments marked
+   "Production:" say what each value becomes on a deployment; `PASSKEY_RP_ID` stays empty until the
+   app has a custom domain)
 4. `public/manifest.webmanifest`, `public/offline.html`, `public/sw.js` — the name, colors and cache names
 5. `scripts/generate-icons.mjs` and `src/components/logo.tsx` — the icon; run `pnpm icons`
 6. `README.md` — this file; `LICENSE` — the copyright holder, if it isn't you
@@ -110,30 +111,30 @@ Then rename the project:
 
 ## Deploy to Cloudflare
 
-`wrangler.example.jsonc` shows `wrangler.jsonc` filled in for production (custom domain, sender,
-Turnstile, VAPID key, D1 id), with the secrets listed at the top; wrangler does not read it.
-Deploys run on Cloudflare's `cf` CLI, which reads `cloudflare.config.ts`, builds with Vite and
-uploads a new version of the Worker; secrets set with `wrangler secret put` are kept. `wrangler.jsonc`
-stays for local dev, the browser tests, D1 migrations and `wrangler types`, so the bindings live in
-both files: mirror every change to `wrangler.jsonc` in `cloudflare.config.ts` (`domains` for the
-custom domain, `bindings.text` for the vars, the D1 `id`) and check the binding list
-`pnpm cf:dry-run` prints. `@cloudflare/vite-plugin` stays at 1.64.0 (Dependabot ignores newer
-releases): 1.65.0 dropped the support for `cloudflare.config.ts` that `cf` builds through.
+`cloudflare.config.ts` is the Worker's only configuration: Cloudflare's `cf` CLI deploys from it
+(it builds with Vite and uploads a new version of the Worker, keeping the secrets already set), and
+the Cloudflare Vite plugin (`@cloudflare/vite-plugin` 2.0, a beta pinned on purpose: the 1.x
+releases read wrangler's config instead) reads it for `pnpm dev`, `pnpm dev:cf` and the browser
+tests. Its comments marked "Production:" say what to fill in, and the secrets are listed at its top.
+Check the binding list `pnpm cf:dry-run` prints after every change.
 
-1. Create the database and put its id in `wrangler.jsonc` (`database_id`) and `cloudflare.config.ts`
-   (`id`):
-   `pnpm exec wrangler d1 create ts-template`, then `pnpm db:migrate:remote`.
+1. Sign in once with `pnpm exec cf auth login`. Create the database and put its id in
+   `cloudflare.config.ts` (the `DB` binding's `id`, which `pnpm db:migrate:*` reads too):
+   `pnpm exec cf d1 create --name <your-app>`, then `pnpm db:migrate:remote`.
 2. Onboard the sender domain to Cloudflare Email Service (Dashboard → Email → Email Sending) and set
-   `EMAIL_FROM` in both files.
+   `EMAIL_FROM`.
 3. Create a Turnstile widget for your hostnames, put its site key in `TURNSTILE_SITE_KEY` and its
    secret in the `TURNSTILE_SECRET_KEY` secret. The test keys are only used on local runs; without a
    real pair the deployed app refuses sign-in and account deletion.
-4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in both files, the private
+4. For push notifications, run `pnpm vapid`: put `VAPID_PUBLIC_KEY` in `cloudflare.config.ts`, the private
    key in the `VAPID_PRIVATE_KEY` secret, and a contact in `VAPID_SUBJECT`.
-5. For passkeys, serve the app from a custom domain (uncomment `routes` in `wrangler.jsonc` and
-   `domains` in `cloudflare.config.ts`) and put that hostname in `PASSKEY_RP_ID` (see [Passkeys](#passkeys)). Left empty, the deployed app
+5. For passkeys, serve the app from a custom domain (uncomment `domains` and `workersDev` in
+   `cloudflare.config.ts`) and put that hostname in `PASSKEY_RP_ID` (see [Passkeys](#passkeys)). Left empty, the deployed app
    signs in by email only.
-6. Set the secrets with `pnpm exec wrangler secret put <NAME>`:
+6. Set the secrets with
+   `pnpm exec cf workers secrets update <NAME> --worker <your-app> --type secret_text --text "<value>"`
+   (it needs the Worker to exist: on the first deploy run step 7 first; the app answers with an
+   error until `BETTER_AUTH_SECRET` is set):
 
    | Secret                 | Purpose                                                                                    |
    | ---------------------- | ------------------------------------------------------------------------------------------ |
@@ -142,18 +143,18 @@ releases): 1.65.0 dropped the support for `cloudflare.config.ts` that `cf` build
    | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.                                |
    | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone.                           |
 
-7. Sign in once with `pnpm exec cf auth login`, then `pnpm run deploy` (not `pnpm deploy`, which is
-   a pnpm built-in). To deploy from GitHub Actions,
+7. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
    add the `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template plus Account → D1 → Edit)
    and `CLOUDFLARE_ACCOUNT_ID` repository secrets and run the Deploy workflow, or switch it to run on
    every push (see the comment at the top of `.github/workflows/deploy.yml`). `cf` reads the same two
    variables.
 
-To serve the app from your own hostname, uncomment `routes` in `wrangler.jsonc` and `domains` in
-`cloudflare.config.ts`. Roll a bad deploy back with `pnpm exec wrangler rollback <version id>`
-(`pnpm exec wrangler deployments list` shows the versions).
+To serve the app from your own hostname, uncomment `domains` in `cloudflare.config.ts`. Roll a bad
+deploy back by deploying an earlier version again with
+`pnpm exec cf workers deployments create --worker <your-app>`
+(`pnpm exec cf workers versions list --worker-id <your-app>` shows the versions).
 
-The Worker has a nightly Cron Trigger (`triggers.crons` in `wrangler.jsonc` and `triggers` in `cloudflare.config.ts`, `scheduled` in
+The Worker has a nightly Cron Trigger (`triggers` in `cloudflare.config.ts`, `scheduled` in
 `src/server.ts`) that deletes expired sign-in codes and passkey challenges from D1. Add your own
 scheduled work to that handler.
 
@@ -206,8 +207,8 @@ working for everyone, so a lost device never locks anyone out.
   the two local origins), never read from the request: the emulator rewrites the URL and `Origin`
   to the custom domain.
 - **Setting it up in a project made from this template.** Serve the app from its custom domain
-  (`routes` in `wrangler.jsonc`, `domains` in `cloudflare.config.ts`), then set `PASSKEY_RP_ID` to
-  `"app.example.com"` in both files: the bare hostname, no scheme, port or path, exactly the host users open. Deploy, and the
+  (`domains` in `cloudflare.config.ts`), then set `PASSKEY_RP_ID` there to
+  `"app.example.com"`: the bare hostname, no scheme, port or path, exactly the host users open. Deploy, and the
   sign-in page shows the passkey button there. Changing the domain later orphans every passkey made
   on the old one (users sign in by email and add a new one), so pick the long-term hostname.
 - **Adding one.** After an email sign-in the home page offers it once per device
@@ -232,7 +233,7 @@ working for everyone, so a lost device never locks anyone out.
   Cron Trigger deletes expired ones (`src/lib/verification-cleanup.ts`).
 - Browser tests use Chromium's virtual authenticator (`e2e/passkey.spec.ts`). They are skipped when
   the tests run on another port (`E2E_PORT`), where no passkeys are offered. `E2E_INSPECTOR_PORT`
-  moves wrangler's inspector off 9229 when another emulator holds it.
+  moves the emulator's inspector off 9229 when another emulator holds it.
 - Closing the account deletes its passkeys with everything else.
 
 ## Sending push notifications
@@ -259,7 +260,7 @@ sends the new one to `/api/push/subscription`.
 | ------------------------ | --------------------------------------------------------------------------------------- |
 | `pnpm dev`               | Vite dev server (`vp dev`)                                                              |
 | `pnpm dev:cf`            | Build and serve the Worker in the Cloudflare emulator (`--fresh` wipes the local state) |
-| `pnpm build`             | Build the client assets and the Worker into `dist` (`vp build`)                         |
+| `pnpm build`             | Build the Worker and its assets into `.cloudflare/output` (`vp build`)                  |
 | `pnpm run deploy`        | Build and deploy to Cloudflare Workers with `cf deploy`                                 |
 | `pnpm cf:dry-run`        | Build and print what `cf deploy` would upload, bindings included                        |
 | `pnpm check`             | `vp check` (format, lint) + `typecheck`                                                 |
@@ -272,7 +273,7 @@ sends the new one to `/api/push/subscription`.
 | `pnpm db:migrate:local`  | Apply migrations to the local D1                                                        |
 | `pnpm db:migrate:remote` | Apply migrations to the deployed D1                                                     |
 | `pnpm db:reset:local`    | Wipe the local D1 and migrate again                                                     |
-| `pnpm cf-typegen`        | Regenerate `worker-configuration.d.ts` after changing bindings                          |
+| `pnpm cf-typegen`        | Generate the Worker's types from `cloudflare.config.ts` (`typecheck` runs it)           |
 | `pnpm icons`             | Redraw the PWA icons                                                                    |
 | `pnpm vapid`             | Print a new VAPID key pair for push notifications                                       |
 | `pnpm fix`               | Auto-fix formatting and lint problems (`vp check --fix`)                                |
