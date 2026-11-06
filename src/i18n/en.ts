@@ -10,6 +10,7 @@ export const en: Messages = {
     account: "Account",
     signIn: "Sign in",
     signOut: "Sign out",
+    signOutFailed: "Could not sign out.",
     close: "Close",
     pullToReload: "Pull to reload",
     releaseToReload: "Release to reload",

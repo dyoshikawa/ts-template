@@ -13,6 +13,7 @@ export const ja = {
     account: "アカウント",
     signIn: "サインイン",
     signOut: "サインアウト",
+    signOutFailed: "サインアウトできませんでした。",
     close: "閉じる",
     pullToReload: "引き下げて更新",
     releaseToReload: "離して更新",
