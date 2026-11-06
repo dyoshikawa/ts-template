@@ -167,7 +167,13 @@ export const ja = {
     onNote: "この端末の通知はオンです。",
     sendTest: "テスト通知を送る",
     turnOff: "通知をオフにする",
-    failed: "問題が発生しました。ページを再読み込みしてもう一度お試しください。",
+    turnOnFailed: "通知をオンにできませんでした。",
+    turnOffFailed: "通知をオフにできませんでした。",
+    testFailed: "テスト通知を送れませんでした。",
+    checkFailed: "この端末の通知の状態を確かめられませんでした。",
+    syncFailed: "この端末の通知の登録をサーバーに送り直せませんでした。",
+    browserRefused: ({ name }: { name: string }) =>
+      `ブラウザーのプッシュ通知の仕組みが応じませんでした（${name}）。`,
     rateLimited: "テスト通知が多すぎます。1分ほど待ってからもう一度お試しください。",
     sent: ({ count }: { count: string; plural: Intl.LDMLPluralRule }) =>
       `${count} 台の端末に送りました。`,

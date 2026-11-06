@@ -47,14 +47,22 @@ function toKeys(subscription: PushSubscription) {
   return { endpoint, p256dh: keys.p256dh, auth: keys.auth };
 }
 
-/** Sends this device's subscription to the server again, in case the browser rotated it. */
-export async function resyncSubscription(): Promise<boolean> {
+/**
+ * Sends this device's subscription to the server again, in case the browser
+ * rotated it. Answers whether the device is subscribed, and why sending it
+ * failed if it did: the device stays subscribed either way.
+ */
+export async function resyncSubscription(): Promise<{ subscribed: boolean; saveError?: unknown }> {
   const subscription = await currentSubscription();
   if (!subscription) {
-    return false;
+    return { subscribed: false };
   }
-  await savePushSubscription({ data: toKeys(subscription) });
-  return true;
+  try {
+    await savePushSubscription({ data: toKeys(subscription) });
+  } catch (saveError) {
+    return { subscribed: true, saveError };
+  }
+  return { subscribed: true };
 }
 
 /**
