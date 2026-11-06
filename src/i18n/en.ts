@@ -20,6 +20,8 @@ export const en: Messages = {
   },
   turnstile: {
     unavailable: "This action is unavailable: the verification check is not set up on this server.",
+    loadFailed:
+      "The bot check (Cloudflare Turnstile) could not be loaded: you are offline, or an extension or the network is blocking it. Check your connection, then reload the page.",
   },
   failure: {
     withKind: ({ action, kind }) => `${action} ${kind}`,
