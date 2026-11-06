@@ -6,7 +6,7 @@ import * as z from "zod/mini";
 
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
-import { createAuth } from "./auth";
+import { loadCreateAuth, readSession } from "./auth-server";
 import { otpIdentifiers } from "./otp-identifiers";
 import { passkeyConfig } from "./passkey";
 import {
@@ -43,7 +43,7 @@ const PASSKEY_FRESH_AGE_MS = 24 * 60 * 60 * 1000;
  */
 export const listPasskeys = createServerFn({ method: "GET" }).handler(async () => {
   const request = getRequest();
-  const session = await createAuth({ request }).api.getSession({ headers: request.headers });
+  const session = await readSession();
   if (!session) {
     throw new Response("Unauthorized", { status: 401 });
   }
@@ -75,7 +75,9 @@ export const deleteAccount = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const request = getRequest();
-    const auth = createAuth({ request });
+    // Loaded here, so the sign-in page's server functions in this file do
+    // not load Better Auth (see `readSession`).
+    const auth = (await loadCreateAuth())({ request });
     // Read from the database, not the 5-minute cookie cache: a session signed
     // out or revoked elsewhere must not delete the account.
     const session = await auth.api.getSession({
