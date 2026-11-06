@@ -31,7 +31,7 @@ function render(value: unknown): unknown {
 const MAY_BE_EMPTY = /\.(before|after)$/u;
 
 /** Entries with no words of their own (only values and punctuation). */
-const NO_WORDS = new Set(["common.pageTitle"]);
+const NO_WORDS = new Set(["common.pageTitle", "failure.withKind"]);
 
 const JAPANESE = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u;
 

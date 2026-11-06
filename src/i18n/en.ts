@@ -20,6 +20,26 @@ export const en: Messages = {
   turnstile: {
     unavailable: "This action is unavailable: the verification check is not set up on this server.",
   },
+  failure: {
+    withKind: ({ action, kind }) => `${action} ${kind}`,
+    offline: "Could not reach the server. Check your connection and try again.",
+    timeout: "The server did not answer in time. Try again.",
+    rateLimited: "Too many tries in a short time. Wait a moment and try again.",
+    rateLimitedUntil: ({ time }) => `Too many tries in a short time. Try again after ${time}.`,
+    signedOut: "Your session has ended. Sign in again.",
+    forbidden: "You are not allowed to do this.",
+    notFound: "It could not be found (it may have been deleted).",
+    refused: ({ status }) => `The server turned the request down (HTTP ${status}).`,
+    server: ({ status }) => `The server ran into an error (HTTP ${status}). Try again later.`,
+    serverNoStatus: "The server ran into an error. Try again later.",
+    unexpected: "Something unexpected went wrong on this page. Reload the page.",
+  },
+  routeError: {
+    title: "This page could not be shown",
+    loadAgain: "Load again",
+    notFoundTitle: "Page not found",
+    notFoundBody: "There is no page at this address. It may have moved or been deleted.",
+  },
   language: {
     label: "Language",
     saveFailed: "Could not save the language. Please try again.",
