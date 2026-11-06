@@ -23,12 +23,6 @@ updates:
       - "dyoshikawa"
     allow:
       - dependency-type: "all"
-    ignore:
-      # 1.65.0 dropped the support for cf's `cloudflare.config.ts` and its
-      # Build Output, which `pnpm cf:dry-run` needs; upstream points to the
-      # v2 plugin (beta) instead. Drop this once the template moves to v2.
-      - dependency-name: "@cloudflare/vite-plugin"
-        versions: [">=1.65.0"]
 
   # Automatic updates for GitHub Actions
   - package-ecosystem: "github-actions"

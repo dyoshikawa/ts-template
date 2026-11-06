@@ -4,7 +4,7 @@ import { isLocalRequest } from "./local-request";
 
 /**
  * Stand-in secret for local runs only (`vp dev`, the emulator without a
- * `.dev.vars` secret), where there is no `wrangler secret`.
+ * `.dev.vars` secret), where there is no Worker secret.
  */
 const DEV_SECRET = "insecure-dev-only-secret-do-not-use-in-production";
 

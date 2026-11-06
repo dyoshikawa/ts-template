@@ -10,7 +10,7 @@ import { deleteExpiredVerifications } from "./lib/verification-cleanup";
  * headers added. Each response gets its own CSP nonce, handed to the router
  * through a request header (src/lib/csp-nonce.ts). `vp dev` injects inline
  * scripts of its own, so it runs without the policy. The Cron Trigger
- * (`triggers.crons` in `wrangler.jsonc`, nightly) clears expired sign-in
+ * (`triggers` in `cloudflare.config.ts`, nightly) clears expired sign-in
  * codes and passkey challenges; add more scheduled work or a `queue` handler
  * here when the app needs them.
  */

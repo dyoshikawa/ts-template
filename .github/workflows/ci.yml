@@ -63,7 +63,7 @@ jobs:
           fi
 
       - name: Check build artifacts
-        run: test -d dist/client && test -f dist/server/index.js
+        run: test -d .cloudflare/output/v0/workers/default/assets && test -f .cloudflare/output/v0/workers/default/bundle/index.js
 
   e2e:
     name: Browser Tests
@@ -111,14 +111,11 @@ jobs:
       - name: Run browser tests
         run: pnpm e2e
 
-      # Also after a cancelled step: the emulator's own log says why workerd
-      # went away when a test hangs.
+      # Also after a cancelled step, when a test hangs.
       - name: Upload traces of failed tests
         if: failure() || cancelled()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-test-results
-          path: |
-            test-results/
-            ~/.config/.wrangler/logs/
+          path: test-results/
           retention-days: 7
