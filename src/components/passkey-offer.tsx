@@ -26,7 +26,7 @@ type OfferState =
  * The account page can always add one.
  */
 export function PasskeyOffer() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const offered = usePasskeyOfferPending();
   const [state, setState] = useState<OfferState>({ name: "open", error: null });
 
@@ -46,7 +46,7 @@ export function PasskeyOffer() {
 
   const register = async () => {
     setState({ name: "pending" });
-    const result = await addPasskey({ t });
+    const result = await addPasskey({ t, locale });
     if (result.status === "ok") {
       // Ends the offer, but the card stays to say so until closed.
       setState({ name: "done" });

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 
 import { type Messages } from "../i18n/messages";
 import { APP_NAME } from "./app";
+import { classifyFailure, failureText } from "./failure";
 import { TOO_MANY_PASSKEYS } from "./sign-in-errors";
 
 /**
@@ -139,13 +140,42 @@ export function declinePasskeyOffer(): void {
  */
 const CANCELLED_CODES = new Set(["ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY", "ERROR_CEREMONY_ABORTED"]);
 
+/** What Better Auth's passkey client reports for a refused request (`retryAfter`: see unreachable.ts). */
+type PasskeyError = { status: number; code?: string | undefined; retryAfter?: number | undefined };
+
+/**
+ * The kind of a passkey failure: the browser's own refusal (SimpleWebAuthn's
+ * `ERROR_*` codes, and Better Auth's `AUTH_CANCELLED` for any other error
+ * the browser threw), which carries a made-up status 400, or else what the
+ * server's answer says (src/lib/failure.ts).
+ */
+function passkeyFailureText({
+  error,
+  t,
+  locale,
+}: {
+  error: PasskeyError;
+  t: Messages;
+  locale: string;
+}): string {
+  if (
+    error.code !== undefined &&
+    (error.code.startsWith("ERROR_") || error.code === "AUTH_CANCELLED")
+  ) {
+    return t.passkeys.errors.browser({ code: error.code });
+  }
+  return failureText({ failure: classifyFailure(error), t, locale });
+}
+
 /** What to tell the user when adding a passkey failed; `null` when they cancelled. */
 export function passkeyRegistrationErrorMessage({
   error,
   t,
+  locale,
 }: {
-  error: { status: number; code?: string | undefined };
+  error: PasskeyError;
   t: Messages;
+  locale: string;
 }): string | null {
   if (error.code !== undefined && CANCELLED_CODES.has(error.code)) {
     return null;
@@ -160,7 +190,10 @@ export function passkeyRegistrationErrorMessage({
     case TOO_MANY_PASSKEYS:
       return t.passkeys.errors.tooMany;
     default:
-      return t.passkeys.errors.addFailed;
+      return t.failure.withKind({
+        action: t.passkeys.errors.addFailed,
+        kind: passkeyFailureText({ error, t, locale }),
+      });
   }
 }
 
@@ -168,9 +201,11 @@ export function passkeyRegistrationErrorMessage({
 export function passkeySignInErrorMessage({
   error,
   t,
+  locale,
 }: {
-  error: { status: number; code?: string | undefined };
+  error: PasskeyError;
   t: Messages;
+  locale: string;
 }): string | null {
   if (error.code !== undefined && CANCELLED_CODES.has(error.code)) {
     return null;
@@ -181,5 +216,11 @@ export function passkeySignInErrorMessage({
   if (error.status === 403) {
     return t.passkeys.errors.forbidden;
   }
-  return t.passkeys.errors.signInFailed;
+  return t.failure.withKind({
+    action: t.passkeys.errors.signInFailed,
+    kind: t.failure.withKind({
+      action: passkeyFailureText({ error, t, locale }),
+      kind: t.passkeys.errors.emailInstead,
+    }),
+  });
 }

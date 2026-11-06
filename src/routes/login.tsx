@@ -49,7 +49,7 @@ const MAX_AUTO_FILL_FAILURES = 5;
 function LoginPage() {
   const router = useRouter();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { turnstile, passkeys: passkeysOffered } = Route.useLoaderData();
   const [step, setStep] = useState<Step>({ name: "email" });
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +80,7 @@ function LoginPage() {
     setCaptchaRound((round) => round + 1);
     setBusy(null);
     if (sendError) {
-      setError(signInErrorMessage({ error: sendError, step: "send", t }));
+      setError(signInErrorMessage({ error: sendError, step: "send", t, locale }));
       return;
     }
     setStep({ name: "otp", email });
@@ -96,7 +96,7 @@ function LoginPage() {
     const { error: verifyError } = await authClient.signIn.emailOtp({ email, otp });
     if (verifyError) {
       setBusy(null);
-      setError(signInErrorMessage({ error: verifyError, step: "verify", t }));
+      setError(signInErrorMessage({ error: verifyError, step: "verify", t, locale }));
       return;
     }
     if (passkeys) {
@@ -144,7 +144,7 @@ function LoginPage() {
         setAutoFillRounds(({ round }) => ({ round, failures: MAX_AUTO_FILL_FAILURES }));
         return;
       }
-      const message = passkeySignInErrorMessage({ error: passkeyError, t });
+      const message = passkeySignInErrorMessage({ error: passkeyError, t, locale });
       if (message) {
         setError(message);
       }

@@ -12,6 +12,7 @@ import {
   showPasskeyOffer,
   usePasskeyOfferPending,
 } from "./passkey-browser";
+import { UNREACHABLE } from "./unreachable";
 
 const OFFER_KEY = `${APP_NAME}:passkey-offer`;
 const DECLINED_KEY = `${APP_NAME}:passkey-offer-declined`;
@@ -23,38 +24,68 @@ afterEach(() => {
 });
 
 describe("passkey error messages", () => {
+  const locale = "en-US";
+
   it("stays quiet when the user closed the browser's dialog", () => {
     for (const code of ["ERROR_PASSTHROUGH_SEE_CAUSE_PROPERTY", "ERROR_CEREMONY_ABORTED"]) {
-      expect(passkeyRegistrationErrorMessage({ error: { status: 400, code }, t: en })).toBeNull();
-      expect(passkeySignInErrorMessage({ error: { status: 400, code }, t: en })).toBeNull();
+      const error = { status: 400, code };
+      expect(passkeyRegistrationErrorMessage({ error, t: en, locale })).toBeNull();
+      expect(passkeySignInErrorMessage({ error, t: en, locale })).toBeNull();
     }
   });
 
   it("asks for a fresh email sign-in when the session is too old to add a passkey", () => {
     expect(
-      passkeyRegistrationErrorMessage({ error: { status: 403, code: "SESSION_NOT_FRESH" }, t: en }),
+      passkeyRegistrationErrorMessage({
+        error: { status: 403, code: "SESSION_NOT_FRESH" },
+        t: en,
+        locale,
+      }),
     ).toContain("sign in again with your email address");
   });
 
   it("says the account is full when it holds the most passkeys it may", () => {
     expect(
-      passkeyRegistrationErrorMessage({ error: { status: 403, code: "TOO_MANY_PASSKEYS" }, t: en }),
+      passkeyRegistrationErrorMessage({
+        error: { status: 403, code: "TOO_MANY_PASSKEYS" },
+        t: en,
+        locale,
+      }),
     ).toBe(en.passkeys.errors.tooMany);
   });
 
-  it("points to email sign-in when a passkey fails", () => {
+  it("points to email sign-in when a passkey fails, and says what kind of failure it was", () => {
     expect(
-      passkeySignInErrorMessage({ error: { status: 401, code: "PASSKEY_NOT_FOUND" }, t: en }),
+      passkeySignInErrorMessage({
+        error: { status: 401, code: "PASSKEY_NOT_FOUND" },
+        t: en,
+        locale,
+      }),
     ).toContain("Sign in with your email address");
-    expect(passkeySignInErrorMessage({ error: { status: 500 }, t: en })).toContain(
-      "email address instead",
+    expect(passkeySignInErrorMessage({ error: { status: 500 }, t: en, locale })).toBe(
+      `${en.passkeys.errors.signInFailed} ${en.failure.server({ status: 500 })} ${en.passkeys.errors.emailInstead}`,
+    );
+    expect(
+      passkeySignInErrorMessage({ error: { status: 503, code: UNREACHABLE }, t: en, locale }),
+    ).toContain(en.failure.offline);
+  });
+
+  it("names the browser's refusal rather than calling it the server's", () => {
+    expect(
+      passkeyRegistrationErrorMessage({
+        error: { status: 400, code: "ERROR_INVALID_DOMAIN" },
+        t: en,
+        locale,
+      }),
+    ).toBe(
+      `${en.passkeys.errors.addFailed} ${en.passkeys.errors.browser({ code: "ERROR_INVALID_DOMAIN" })}`,
     );
   });
 
   it("says so when the account may not sign in", () => {
-    expect(passkeySignInErrorMessage({ error: { status: 403, code: "FORBIDDEN" }, t: en })).toBe(
-      "This account cannot sign in.",
-    );
+    expect(
+      passkeySignInErrorMessage({ error: { status: 403, code: "FORBIDDEN" }, t: en, locale }),
+    ).toBe("This account cannot sign in.");
   });
 });
 
