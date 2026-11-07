@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { languageFromAcceptLanguage, languageFromCookie, resolveLanguage } from "./language";
+import {
+  languageFromAcceptLanguage,
+  languageFromCookie,
+  requestLanguage,
+  resolveLanguage,
+} from "./language";
 
 describe("languageFromAcceptLanguage", () => {
   it("reads any ja range as Japanese and anything else as English", () => {
@@ -28,6 +33,15 @@ describe("languageFromCookie", () => {
     expect(languageFromCookie("lang=de")).toBeNull();
     expect(languageFromCookie("slang=en")).toBeNull();
     expect(languageFromCookie(null)).toBeNull();
+  });
+
+  it("ignores a malformed value instead of throwing", () => {
+    expect(languageFromCookie("lang=%")).toBeNull();
+    expect(languageFromCookie("lang=%E0%A4%A")).toBeNull();
+    const request = new Request("https://app.example.com/", {
+      headers: { cookie: "lang=%", "accept-language": "ja" },
+    });
+    expect(requestLanguage({ request })).toBe("ja");
   });
 });
 
