@@ -36,6 +36,12 @@ describe("passkey error messages", () => {
     ).toContain("sign in again with your email address");
   });
 
+  it("says the account is full when it holds the most passkeys it may", () => {
+    expect(
+      passkeyRegistrationErrorMessage({ error: { status: 403, code: "TOO_MANY_PASSKEYS" }, t: en }),
+    ).toBe(en.passkeys.errors.tooMany);
+  });
+
   it("points to email sign-in when a passkey fails", () => {
     expect(
       passkeySignInErrorMessage({ error: { status: 401, code: "PASSKEY_NOT_FOUND" }, t: en }),

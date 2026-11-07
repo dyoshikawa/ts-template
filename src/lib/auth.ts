@@ -18,6 +18,9 @@ import {
   CAPTCHA_PATHS,
   DISABLED_AUTH_PATHS,
   guardAuthRequest,
+  MAX_PASSKEYS_PER_USER,
+  PASSKEY_REGISTER_OPTIONS_PATH,
+  PASSKEY_REGISTRATION_PATHS,
   VERIFY_PASSKEY_REGISTRATION_PATH,
 } from "./auth-guard";
 import { resolveAuthSecret } from "./auth-secret";
@@ -26,6 +29,7 @@ import { OTP_LENGTH } from "./otp-code";
 import { buildOtpEmail, type OtpEmail } from "./otp-email";
 import { buildPasskeyAddedEmail } from "./passkey-email";
 import { PASSKEY_LABEL } from "./passkey-name";
+import { TOO_MANY_PASSKEYS } from "./sign-in-errors";
 import { turnstileBinding, turnstileConfig } from "./turnstile";
 
 const OTP_EXPIRES_IN_SECONDS = 10 * 60;
@@ -111,9 +115,13 @@ export function createAuth({
       // is a D1 write, so it gets a tighter limit than the default 100 per
       // 10 s. The sign-in page asks for one challenge per visit (the email
       // field's autofill) and one per press of the passkey button.
+      // Adding a passkey mails a notice, so the two registration steps are
+      // held to a handful a minute too (an addition takes one of each).
       customRules: {
         "/passkey/generate-authenticate-options": { window: 60, max: 20 },
         "/passkey/verify-authentication": { window: 60, max: 10 },
+        [PASSKEY_REGISTER_OPTIONS_PATH]: { window: 60, max: 10 },
+        [VERIFY_PASSKEY_REGISTRATION_PATH]: { window: 60, max: 10 },
       },
     },
     advanced: {
@@ -128,13 +136,29 @@ export function createAuth({
       // Adding or removing a passkey also needs the session in the database:
       // the endpoint itself trusts the cookie cache, which would let a
       // signed-out or revoked session do it for a few more minutes.
+      // Adding one also stops once the account holds `MAX_PASSKEYS_PER_USER`.
       before: createAuthMiddleware(async (ctx) => {
         guardAuthRequest({ path: ctx.path, body: ctx.body, turnstile });
-        if (
-          AUTHORITATIVE_SESSION_PATHS.has(ctx.path) &&
-          !(await getAuthoritativeSessionFromCtx(ctx))
-        ) {
+        if (!AUTHORITATIVE_SESSION_PATHS.has(ctx.path)) {
+          return;
+        }
+        const session = await getAuthoritativeSessionFromCtx(ctx);
+        if (!session) {
           throw new APIError("UNAUTHORIZED");
+        }
+        // Counting then inserting is not atomic, so racing registrations may
+        // pass the cap by a few; the registration rate limit bounds that.
+        if (PASSKEY_REGISTRATION_PATHS.has(ctx.path)) {
+          const stored = await ctx.context.adapter.count({
+            model: "passkey",
+            where: [{ field: "userId", value: session.user.id }],
+          });
+          if (stored >= MAX_PASSKEYS_PER_USER) {
+            throw new APIError("FORBIDDEN", {
+              code: TOO_MANY_PASSKEYS,
+              message: `An account holds at most ${MAX_PASSKEYS_PER_USER} passkeys.`,
+            });
+          }
         }
       }),
       // The notice of a new passkey goes out once it is stored, never for a

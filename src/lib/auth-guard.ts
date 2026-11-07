@@ -21,8 +21,24 @@ const SIGN_IN_PATHS = new Set([SEND_OTP_PATH, SIGN_IN_OTP_PATH]);
  */
 export const CAPTCHA_PATHS: readonly string[] = [SEND_OTP_PATH];
 
+/** The endpoint that hands out a new passkey's challenge. */
+export const PASSKEY_REGISTER_OPTIONS_PATH = "/passkey/generate-register-options";
+
 /** The endpoint that stores a new passkey (after the browser made it). */
 export const VERIFY_PASSKEY_REGISTRATION_PATH = "/passkey/verify-registration";
+
+/** The two endpoints that add a passkey: options first, then verification. */
+export const PASSKEY_REGISTRATION_PATHS: ReadonlySet<string> = new Set([
+  PASSKEY_REGISTER_OPTIONS_PATH,
+  VERIFY_PASSKEY_REGISTRATION_PATH,
+]);
+
+/**
+ * How many passkeys one account may hold. Every passkey added mails a notice
+ * (through the binding that also mails sign-in codes) and stores a row, so
+ * the count is bounded; 20 leaves room for every device a person owns.
+ */
+export const MAX_PASSKEYS_PER_USER = 20;
 
 /**
  * Endpoints switched off with Better Auth's `disabledPaths` (answered 404).
@@ -81,7 +97,7 @@ export const DISABLED_AUTH_PATHS = [
  * copied cookie stops working for them the moment its session ends.
  */
 export const AUTHORITATIVE_SESSION_PATHS: ReadonlySet<string> = new Set([
-  "/passkey/generate-register-options",
+  PASSKEY_REGISTER_OPTIONS_PATH,
   VERIFY_PASSKEY_REGISTRATION_PATH,
   "/passkey/delete-passkey",
 ]);

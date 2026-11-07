@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 
 import { type Messages } from "../i18n/messages";
 import { APP_NAME } from "./app";
+import { TOO_MANY_PASSKEYS } from "./sign-in-errors";
 
 /**
  * Browser-side helpers for passkeys: whether the browser can use them, the
@@ -156,6 +157,8 @@ export function passkeyRegistrationErrorMessage({
       return t.passkeys.needsFreshSignIn;
     case "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED":
       return t.passkeys.errors.alreadyRegistered;
+    case TOO_MANY_PASSKEYS:
+      return t.passkeys.errors.tooMany;
     default:
       return t.passkeys.errors.addFailed;
   }

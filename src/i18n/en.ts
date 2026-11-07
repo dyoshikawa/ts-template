@@ -86,6 +86,7 @@ export const en: Messages = {
       "For your security, passkeys can only be added within a day of signing in with an email code. Sign out, sign in again with your email address, then add the passkey.",
     errors: {
       alreadyRegistered: "This passkey is already registered.",
+      tooMany: "No more passkeys can be added. Delete one you no longer use, then try again.",
       addFailed: "Could not add the passkey. Please try again.",
       notFound:
         "This passkey is not registered (it may have been deleted). Sign in with your email address instead.",

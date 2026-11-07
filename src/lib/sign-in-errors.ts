@@ -6,6 +6,9 @@ export const EMAIL_NOT_ALLOWED = "EMAIL_NOT_ALLOWED";
 /** The `code` the auth guard answers with when a Worker has no Turnstile key pair. */
 export const SIGN_IN_UNAVAILABLE = "SIGN_IN_UNAVAILABLE";
 
+/** The `code` `createAuth` answers with when an account holds the most passkeys it may. */
+export const TOO_MANY_PASSKEYS = "TOO_MANY_PASSKEYS";
+
 /** What Better Auth's client reports for a refused request. */
 type AuthError = { status: number; code?: string | undefined };
 

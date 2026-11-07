@@ -184,7 +184,9 @@ What the auth code enforces, so a change does not quietly drop one of them:
 - **Unused endpoints are off.** `DISABLED_AUTH_PATHS` (`src/lib/auth-guard.ts`) answers 404 for the
   email OTP plugin's password-reset, email-change and verification endpoints and for Better Auth's
   own password, email-verification, email-change, user-deletion and social-account endpoints. Turn
-  one back on only together with the checks it needs.
+  one back on only together with the checks it needs. A path under `/api/auth/` that names no
+  endpoint is answered 404 before Better Auth runs (`isAuthEndpointRequest` in
+  `src/lib/auth-paths.ts`): its rate limiter would otherwise store a D1 row for every made-up path.
 - **Sensitive actions read the session from D1.** The session cookie caches the session for five
   minutes, which outlives a sign-out or revocation elsewhere. Account deletion reads it with
   `disableCookieCache`, and adding or deleting a passkey requires it in the database
@@ -221,7 +223,9 @@ working for everyone, so a lost device never locks anyone out.
   manager known by its AAGUID, plus browser and device from the user agent): a client-supplied name
   is refused and `/passkey/update-passkey` is switched off. Every new passkey is mailed to the
   account's address as a notice (`src/lib/passkey-email.ts`), from an `after` hook once the passkey
-  is stored, in the background after the answer.
+  is stored, in the background after the answer. An account holds at most 20 passkeys
+  (`MAX_PASSKEYS_PER_USER`), and the two registration endpoints allow 10 requests a minute per
+  client, so the notices stay bounded.
 - **Signing in.** The sign-in page has a 🔑 button and offers saved passkeys in the email field's
   autofill (conditional mediation, started again after each attempt until five have failed).
   `ALLOWED_EMAILS` applies to passkeys too: an account removed from the list cannot sign in with an

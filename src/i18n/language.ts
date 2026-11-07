@@ -58,7 +58,10 @@ export function languageFromCookie(header: string | null | undefined): Language 
   for (const part of header.split(";")) {
     const [name, ...rest] = part.trim().split("=");
     if (name === LANGUAGE_COOKIE) {
-      const value = decodeURIComponent(rest.join("="));
+      // Compared as it is: both languages are plain ASCII, so there is
+      // nothing to decode, and decoding a malformed value (`%`) would throw
+      // on every request that reads the cookie.
+      const value = rest.join("=");
       return isLanguage(value) ? value : null;
     }
   }
