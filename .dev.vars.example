@@ -1,5 +1,7 @@
-# Copy to `.dev.vars` (git-ignored). Read by `pnpm dev` and `pnpm dev:cf`;
-# the deployed Worker gets these through `wrangler secret put` instead.
+# Copy to `.dev.vars` (git-ignored). Read by `pnpm dev` and `pnpm dev:cf`
+# (`localVars` in cloudflare.config.ts; `pnpm dev:cf` reads it when it builds);
+# the deployed Worker gets the secrets through `cf workers secrets update`
+# instead.
 
 # Signs session cookies. Optional for requests from this machine, which fall
 # back to a fixed development secret; set one of at least 32 characters
@@ -22,7 +24,7 @@
 #ALLOWED_EMAILS=
 
 # Push notifications: a pair from `pnpm vapid`. The public key overrides the
-# empty one in wrangler.jsonc; unset leaves push notifications off. They only
+# empty one in cloudflare.config.ts; unset leaves push notifications off. They only
 # work in the built app (`pnpm dev:cf`), which registers the service worker.
 #VAPID_PUBLIC_KEY=
 #VAPID_PRIVATE_KEY=

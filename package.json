@@ -25,15 +25,15 @@
   "scripts": {
     "build": "vp build",
     "cf:dry-run": "cf deploy --dry-run",
-    "cf-typegen": "wrangler types --strict-vars=false",
+    "cf-typegen": "cf workers types --quiet",
     "check": "vp check --deny-warnings && pnpm run typecheck",
     "cicheck": "pnpm run cicheck:code && pnpm run cicheck:content",
     "cicheck:code": "pnpm run check && pnpm run test",
     "cicheck:content": "pnpm run cspell && pnpm run secretlint",
     "cspell": "cspell --no-progress --gitignore --dot .",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply DB --local",
-    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "db:migrate:local": "node scripts/d1-migrate.mjs --local",
+    "db:migrate:remote": "node scripts/d1-migrate.mjs",
     "db:reset:local": "node scripts/reset-local-db.mjs",
     "deploy": "cf deploy",
     "dev": "vp dev",
@@ -56,7 +56,7 @@
     "test": "vp test run --silent=true",
     "test:coverage": "vp test run --coverage --silent=true",
     "test:watch": "vp test --silent=true",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm run cf-typegen && tsc --noEmit",
     "vapid": "node scripts/generate-vapid-keys.mjs"
   },
   "dependencies": {
@@ -71,7 +71,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.64.0",
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.12",
     "@playwright/test": "1.65.0",
     "@secretlint/secretlint-rule-preset-recommend": "13.1.0",
     "@tailwindcss/vite": "4.3.5",
@@ -95,8 +95,7 @@
     "typescript": "7.0.2",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "catalog:",
-    "wrangler": "4.159.0"
+    "vitest": "catalog:"
   },
   "engines": {
     "node": "^22.23.0 || ^24.22.0 || >=26.12.0",

@@ -1,5 +1,5 @@
-// Secrets are set with `wrangler secret put`, so `wrangler types` cannot see
-// them; declare them here on top of the generated `Env`.
+// Secrets are not declared in `cloudflare.config.ts` (see there), so the
+// generated `Env` (`cf workers types`) cannot see them; declare them here.
 declare namespace Cloudflare {
   interface Env {
     /**

@@ -24,11 +24,12 @@ updates:
     allow:
       - dependency-type: "all"
     ignore:
-      # 1.65.0 dropped the support for cf's `cloudflare.config.ts` and its
-      # Build Output, which `pnpm cf:dry-run` needs; upstream points to the
-      # v2 plugin (beta) instead. Drop this once the template moves to v2.
+      # Pinned to a 2.0 beta (the only line without wrangler that writes the
+      # Build Output `cf deploy` reads). A beta can change the Build Output or
+      # the config API and must bundle the same @cloudflare/config as `cf`, so
+      # it is bumped by hand together with `cf` (check `pnpm cf:dry-run` and
+      # the browser tests). Drop this once 2.0 is stable.
       - dependency-name: "@cloudflare/vite-plugin"
-        versions: [">=1.65.0"]
 
   # Automatic updates for GitHub Actions
   - package-ecosystem: "github-actions"
