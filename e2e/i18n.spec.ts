@@ -98,6 +98,11 @@ test.describe("in English", () => {
     await expect(page).toHaveTitle("Account — ts-template");
     expect(await japaneseLeft(page)).toEqual([]);
     expect(await overflowsSideways(page)).toBe(false);
+
+    await page.goto("/nowhere");
+    await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+    expect(await japaneseLeft(page)).toEqual([]);
+    expect(await overflowsSideways(page)).toBe(false);
   });
 });
 
@@ -165,7 +170,8 @@ test("a choice that could not be saved switches back and says so", async ({ page
   await page.getByRole("button", { name: "メニュー", exact: true }).click();
   await page.getByRole("button", { name: "English" }).click();
   const snackbar = page.getByTestId("snackbar");
-  await expect(snackbar).toContainText("言語を保存できませんでした");
+  // It says what kind of failure it was, not only that it failed.
+  await expect(snackbar).toContainText("言語を保存できませんでした。サーバーでエラーが起きました");
   await expect(page.getByRole("button", { name: "日本語" })).toHaveAttribute(
     "aria-pressed",
     "true",

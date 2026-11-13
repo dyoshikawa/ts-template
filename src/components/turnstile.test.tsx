@@ -69,4 +69,25 @@ describe("Turnstile", () => {
     unmount();
     expect(remove).toHaveBeenCalledWith("widget-1");
   });
+
+  it("says so when Cloudflare's script cannot be loaded, and tries again on the next mount", async () => {
+    const onToken = vi.fn();
+    const config = { status: "enabled", siteKey: "0xSITE" } as const;
+    const first = render(<Turnstile config={config} action="sign-in" onToken={onToken} />);
+    const script = document.querySelector<HTMLScriptElement>(
+      "script[src*='challenges.cloudflare.com']",
+    );
+    act(() => {
+      script?.dispatchEvent(new Event("error"));
+    });
+    expect((await first.findByRole("alert")).textContent).toBe(ja.turnstile.loadFailed);
+    expect(onToken).toHaveBeenCalledWith(null);
+    first.unmount();
+    // The failed script is not left behind for the next widget to wait on.
+    expect(document.querySelector("script[src*='challenges.cloudflare.com']")).toBeNull();
+    const second = render(<Turnstile config={config} action="sign-in" onToken={onToken} />);
+    expect(document.querySelector("script[src*='challenges.cloudflare.com']")).not.toBeNull();
+    second.unmount();
+    document.querySelector("script[src*='challenges.cloudflare.com']")?.remove();
+  });
 });

@@ -9,12 +9,14 @@ import { BUTTON_EMOJI, dangerButtonClass, secondaryButtonClass } from "../compon
 import { useI18n } from "../i18n/i18n-context";
 import { pageTitle } from "../i18n/page-title";
 import { deleteAccount, getTurnstileConfig, listPasskeys } from "../lib/account-functions";
+import { failureNotice } from "../lib/failure";
 import { loadAuthClient, preloadAuthClient } from "../lib/load-auth-client";
 import { addPasskey } from "../lib/passkey-actions";
 import { usePasskeysSupported } from "../lib/passkey-browser";
 import { passkeyLabel } from "../lib/passkey-name";
 import { disableNotifications } from "../lib/push-client";
 import { getPushConfig } from "../lib/push-functions";
+import { UNREACHABLE } from "../lib/unreachable";
 
 export const Route = createFileRoute("/account")({
   beforeLoad: ({ context }) => {
@@ -43,9 +45,12 @@ function AccountPage() {
   const { turnstile, vapidPublicKey, passkeys } = Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [understood, setUnderstood] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  // A Turnstile token is single-use: after a failed attempt the widget is
+  // remounted for a fresh one, or the button would stay disabled for good.
+  const [captchaRound, setCaptchaRound] = useState(0);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,14 +63,23 @@ function AccountPage() {
     setError(null);
     try {
       await deleteAccount({ data: { turnstileToken: token } });
-      // The server rows are gone with the account; unsubscribe the device too.
-      await disableNotifications({ forgetOnServer: false }).catch(() => {});
+    } catch (caught) {
+      setError(failureNotice({ action: t.account.close.failed, error: caught, t, locale }));
+      setPending(false);
+      setToken(null);
+      setCaptchaRound((round) => round + 1);
+      return;
+    }
+    // The server rows are gone with the account; unsubscribe the device too.
+    // Nothing to tell the user if that fails: no row is left to send to.
+    await disableNotifications({ forgetOnServer: false }).catch(() => undefined);
+    try {
       await router.invalidate();
       await navigate({ to: "/" });
     } catch {
-      setError(t.account.close.failed);
-      setPending(false);
-      setToken(null);
+      // The account is gone either way: load the home page afresh rather
+      // than leave the button spinning.
+      window.location.assign("/");
     }
   };
 
@@ -101,8 +115,15 @@ function AccountPage() {
             {t.account.close.understand}
           </label>
           {understood ? (
-            <Turnstile config={turnstile} action="delete-account" onToken={setToken} />
+            <Turnstile
+              key={captchaRound}
+              config={turnstile}
+              action="delete-account"
+              onToken={setToken}
+            />
           ) : null}
+          {/* An explicit button, not autosave (ui-rule 13): closing the
+              account is irreversible, so it waits for this press. */}
           <button
             type="submit"
             disabled={!understood || !token || pending}
@@ -170,7 +191,7 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
   const add = async () => {
     setBusy({ action: "add" });
     setStatus(null);
-    const result = await addPasskey({ t });
+    const result = await addPasskey({ t, locale });
     if (result.status === "ok") {
       await router.invalidate();
       setStatus({ ok: true, text: t.passkeys.addedOk });
@@ -188,11 +209,16 @@ function PasskeySettings({ passkeys, canAdd }: { passkeys: PasskeyRow[]; canAdd:
     setBusy({ action: "delete", id: passkey.id });
     setStatus(null);
     const authClient = await loadAuthClient();
+    // Without the client (its chunk could not be fetched) it reads like a
+    // request that never left, which it is.
     const { error } = authClient
       ? await authClient.passkey.deletePasskey({ id: passkey.id })
-      : { error: true };
+      : { error: { status: 503, code: UNREACHABLE } };
     if (error) {
-      setStatus({ ok: false, text: t.passkeys.deleteFailed });
+      setStatus({
+        ok: false,
+        text: failureNotice({ action: t.passkeys.deleteFailed, error, t, locale }),
+      });
     } else {
       await router.invalidate();
       setStatus({ ok: true, text: t.passkeys.deleted({ label }) });

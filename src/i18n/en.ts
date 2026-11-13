@@ -10,6 +10,7 @@ export const en: Messages = {
     account: "Account",
     signIn: "Sign in",
     signOut: "Sign out",
+    signOutFailed: "Could not sign out.",
     close: "Close",
     pullToReload: "Pull to reload",
     releaseToReload: "Release to reload",
@@ -19,10 +20,32 @@ export const en: Messages = {
   },
   turnstile: {
     unavailable: "This action is unavailable: the verification check is not set up on this server.",
+    loadFailed:
+      "The bot check (Cloudflare Turnstile) could not be loaded: you are offline, or an extension or the network is blocking it. Check your connection, then reload the page.",
+  },
+  failure: {
+    withKind: ({ action, kind }) => `${action} ${kind}`,
+    offline: "Could not reach the server. Check your connection and try again.",
+    timeout: "The server did not answer in time. Try again.",
+    rateLimited: "Too many tries in a short time. Wait a moment and try again.",
+    rateLimitedUntil: ({ time }) => `Too many tries in a short time. Try again after ${time}.`,
+    signedOut: "Your session has ended. Sign in again.",
+    forbidden: "You are not allowed to do this.",
+    notFound: "It could not be found (it may have been deleted).",
+    refused: ({ status }) => `The server turned the request down (HTTP ${status}).`,
+    server: ({ status }) => `The server ran into an error (HTTP ${status}). Try again later.`,
+    serverNoStatus: "The server ran into an error. Try again later.",
+    unexpected: "Something unexpected went wrong on this page. Reload the page.",
+  },
+  routeError: {
+    title: "This page could not be shown",
+    loadAgain: "Load again",
+    notFoundTitle: "Page not found",
+    notFoundBody: "There is no page at this address. It may have moved or been deleted.",
   },
   language: {
     label: "Language",
-    saveFailed: "Could not save the language. Please try again.",
+    saveFailed: "Could not save the language.",
   },
   home: {
     signedIn: {
@@ -55,12 +78,12 @@ export const en: Messages = {
     passkeyButton: "Sign in with a passkey",
     passkeyNote: "Add a passkey from your account page after signing in with your email address.",
     errors: {
-      sendFailed: "Could not send the code. Please try again.",
+      sendFailed: "Could not send the code.",
+      verifyRequestFailed: "Could not check the code.",
       verifyFailed: "That code is not right. Please try again.",
       expired: "The code has expired. Go back to the email step to send a new one.",
       tooManyAttempts:
         "Too many wrong tries: this code no longer works. Go back to the email step to send a new one.",
-      rateLimited: "Too many tries. Wait a moment and try again.",
       notAllowed: "This email address cannot sign in.",
       unavailable: "Sign-in is not available: the verification check is not set up.",
       checkFailed: "The check failed. Please try again.",
@@ -81,18 +104,19 @@ export const en: Messages = {
     deleteConfirm: ({ label }) =>
       `Delete "${label}"? You will no longer be able to sign in with it.`,
     deleted: ({ label }) => `Deleted "${label}".`,
-    deleteFailed: "Could not delete the passkey. Please try again.",
+    deleteFailed: "Could not delete the passkey.",
     needsFreshSignIn:
       "For your security, passkeys can only be added within a day of signing in with an email code. Sign out, sign in again with your email address, then add the passkey.",
     errors: {
       alreadyRegistered: "This passkey is already registered.",
       tooMany: "No more passkeys can be added. Delete one you no longer use, then try again.",
-      addFailed: "Could not add the passkey. Please try again.",
+      addFailed: "Could not add the passkey.",
+      browser: ({ code }) => `This browser or device turned the passkey request down (${code}).`,
       notFound:
         "This passkey is not registered (it may have been deleted). Sign in with your email address instead.",
       forbidden: "This account cannot sign in.",
-      signInFailed:
-        "Could not sign in with the passkey. You can sign in with your email address instead.",
+      signInFailed: "Could not sign in with the passkey.",
+      emailInstead: "You can sign in with your email address instead.",
     },
     offer: {
       title: "Sign in with a passkey next time?",
@@ -115,7 +139,7 @@ export const en: Messages = {
       body: "Closing your account deletes it and all of its data right away. Deleted data cannot be recovered.",
       understand: "I understand that all my data will be deleted and cannot be restored",
       button: "Close account and delete all data",
-      failed: "Could not close the account. Reload the page and try again.",
+      failed: "Could not close the account.",
     },
   },
   notifications: {
@@ -134,7 +158,12 @@ export const en: Messages = {
     onNote: "Notifications are on for this device.",
     sendTest: "Send a test notification",
     turnOff: "Turn off notifications",
-    failed: "Something went wrong. Reload the page and try again.",
+    turnOnFailed: "Could not turn notifications on.",
+    turnOffFailed: "Could not turn notifications off.",
+    testFailed: "Could not send the test notification.",
+    checkFailed: "Could not check this device's notifications.",
+    syncFailed: "Could not send this device's subscription to the server again.",
+    browserRefused: ({ name }) => `The browser's push service did not go along (${name}).`,
     rateLimited: "Too many test notifications. Wait a minute and try again.",
     sent: ({ count, plural }) => `Sent to ${count} ${plural === "one" ? "device" : "devices"}.`,
     noneAccepted: "No device accepted the notification.",
