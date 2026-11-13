@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { createAuth } from "../../../lib/auth";
+import { loadCreateAuth } from "../../../lib/auth-server";
 import { saveSubscription, subscriptionInput } from "../../../lib/push";
 
 /**
@@ -40,6 +40,8 @@ export const Route = createFileRoute("/api/push/subscription")({
         if (!(request.headers.get("Content-Type") ?? "").startsWith("application/json")) {
           return new Response("Unsupported Media Type", { status: 415 });
         }
+        // Loaded here: the route tree every page loads includes this file.
+        const createAuth = await loadCreateAuth();
         const session = await createAuth({ request }).api.getSession({ headers: request.headers });
         if (!session) {
           return new Response("Unauthorized", { status: 401 });
