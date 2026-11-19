@@ -141,9 +141,9 @@ test("a signed-in user's choice follows them to another browser", async ({
   email,
 }) => {
   await signIn({ page, email });
-  await page.getByRole("button", { name: "メニュー", exact: true }).click();
+  await page.goto("/account");
   await page.getByRole("button", { name: "English" }).click();
-  await expect(page.getByRole("button", { name: "Menu", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Account", exact: true })).toBeVisible();
 
   // A fresh browser asking for Japanese, without the cookie.
   const other = await browser.newContext({ locale: "ja-JP" });
@@ -154,9 +154,10 @@ test("a signed-in user's choice follows them to another browser", async ({
   await other.close();
 });
 
-test("a choice that could not be saved switches back and says so", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByRole("button", { name: "メニュー", exact: true })).toBeVisible();
+test("a choice that could not be saved switches back and says so", async ({ page, email }) => {
+  await signIn({ page, email });
+  await page.goto("/account");
+  await expect(page.getByRole("heading", { name: "アカウント", exact: true })).toBeVisible();
   await page.route(
     (url) => url.pathname.startsWith("/_serverFn"),
     async (route) => {
@@ -167,7 +168,6 @@ test("a choice that could not be saved switches back and says so", async ({ page
       await route.continue();
     },
   );
-  await page.getByRole("button", { name: "メニュー", exact: true }).click();
   await page.getByRole("button", { name: "English" }).click();
   const snackbar = page.getByTestId("snackbar");
   // It says what kind of failure it was, not only that it failed.

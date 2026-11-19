@@ -10,7 +10,6 @@ import { disableNotifications } from "../lib/push-client";
 import { fetchOrUnreachable } from "../lib/unreachable";
 import { Drawer } from "./drawer";
 import { InstallButton } from "./install-button";
-import { LanguageSwitcher } from "./language-switcher";
 import { Logo } from "./logo";
 import { BusyLabel, Emoji } from "./spinner";
 import { BUTTON_EMOJI } from "./ui";
@@ -112,7 +111,6 @@ export function Header({ session }: { session: SessionData }) {
               {t.common.account}
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
-            <LanguageSwitcher className="px-4 py-2" />
             <div className="mt-auto border-t border-neutral-200 dark:border-neutral-800">
               <button
                 type="button"
@@ -142,7 +140,6 @@ export function Header({ session }: { session: SessionData }) {
               {t.common.signIn}
             </Link>
             <InstallButton className={`${menuLinkClass} w-full`} />
-            <LanguageSwitcher className="px-4 py-2" />
           </>
         )}
       </Drawer>
