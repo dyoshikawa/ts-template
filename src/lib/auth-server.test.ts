@@ -82,3 +82,43 @@ describe("Better Auth on a cold start", () => {
     }
   });
 });
+
+/**
+ * Drizzle and the schema (about 150 KB of the Worker's code) are needed only
+ * by requests that touch the database. The Worker's entry is evaluated on
+ * every cold start, the route tree (server routes included) and the sign-in
+ * page's server functions are loaded by every signed-out page, so they reach
+ * the database code only inside the handlers that need it.
+ */
+describe("Drizzle on a cold start", () => {
+  it("is imported on demand by the entry, the server routes and the public server functions", () => {
+    for (const file of [
+      "server.ts",
+      "lib/auth-server.ts",
+      "lib/auth-functions.ts",
+      "lib/public-config-functions.ts",
+      "lib/push-subscription.ts",
+      "routes/api/auth/$.ts",
+      "routes/api/push/subscription.ts",
+    ]) {
+      const source = readFileSync(join(import.meta.dirname, "..", file), "utf8");
+      // Drizzle itself, the database modules, and the server-function files
+      // and libraries that import them (static imports, side-effect ones too).
+      expect(source, file).not.toMatch(
+        /(?:from |import )"(?:drizzle-orm|(?:\.\.?\/)+(?:db\/|lib\/)?(?:client|schema|auth|push|push-functions|account-functions|language-functions|verification-cleanup)(?:\.ts)?")/u,
+      );
+    }
+  });
+
+  it("is not reached by the loaders of the pages a signed-out visitor opens", () => {
+    // A server function called while a page renders loads its file's whole
+    // handler chunk, so these routes call only the files kept free of it.
+    const allowed = new Set(["auth-functions", "public-config-functions"]);
+    for (const file of ["routes/__root.tsx", "routes/index.tsx", "routes/login.tsx"]) {
+      const source = readFileSync(join(import.meta.dirname, "..", file), "utf8");
+      for (const [, name] of source.matchAll(/from "\.\.\/lib\/([\w-]+-functions)(?:\.ts)?"/gu)) {
+        expect(allowed, `${file} imports ${name}`).toContain(name);
+      }
+    }
+  });
+});

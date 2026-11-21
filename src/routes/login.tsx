@@ -12,7 +12,6 @@ import {
 } from "../components/ui";
 import { useI18n } from "../i18n/i18n-context";
 import { pageTitle } from "../i18n/page-title";
-import { getPasskeyAvailability, getTurnstileConfig } from "../lib/account-functions";
 import { authClient } from "../lib/auth-client";
 import { formatOtp, normalizeOtp, OTP_LENGTH } from "../lib/otp-code";
 import {
@@ -20,6 +19,7 @@ import {
   requestPasskeyOffer,
   usePasskeysSupported,
 } from "../lib/passkey-browser";
+import { getPasskeyAvailability, getTurnstileConfig } from "../lib/public-config-functions";
 import { signInErrorMessage } from "../lib/sign-in-errors";
 
 export const Route = createFileRoute("/login")({

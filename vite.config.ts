@@ -1,4 +1,36 @@
-import { defineConfig, lazyPlugins } from "vite-plus";
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+
+import { defineConfig, lazyPlugins, type Plugin } from "vite-plus";
+
+/**
+ * React's `react-dom/server` for workerd (`server.edge.js`) is CommonJS that
+ * loads two renderers: the streaming one TanStack Start uses
+ * (`renderToReadableStream`) and the legacy `renderToString` one (~200 KB)
+ * nothing here calls. The Worker evaluates both at every cold start, so the
+ * production build of the Worker points `react-dom/server` at the streaming
+ * one alone. It has no `renderToString` / `renderToStaticMarkup`: server code
+ * that needs them must drop this plugin. `vp dev` and the browser build keep
+ * the package's own entry.
+ */
+function streamingReactDomServer(): Plugin {
+  const file = join(
+    dirname(createRequire(import.meta.url).resolve("react-dom/server.edge")),
+    "cjs",
+    "react-dom-server.edge.production.js",
+  );
+  if (!existsSync(file)) {
+    throw new Error(`React's streaming server renderer moved (no ${file}); update vite.config.ts`);
+  }
+  return {
+    name: "streaming-react-dom-server",
+    apply: "build",
+    enforce: "pre",
+    applyToEnvironment: (environment) => environment.name === "ssr",
+    resolveId: (source) => (source === "react-dom/server" ? file : null),
+  };
+}
 
 // One file configures the whole Vite+ toolchain: the app build (`vp dev`,
 // `vp build`), the formatter (`fmt`), the linter (`lint`) and the pre-commit
@@ -38,6 +70,7 @@ export default defineConfig({
       tailwindcss(),
       tanstackStart(),
       viteReact(),
+      streamingReactDomServer(),
     ];
   }),
 

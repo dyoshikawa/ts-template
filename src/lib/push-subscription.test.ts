@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { isPushServiceEndpoint } from "./push";
+import { isPushServiceEndpoint } from "./push-subscription";
 
 describe("isPushServiceEndpoint", () => {
   it.each([

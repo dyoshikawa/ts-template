@@ -257,7 +257,7 @@ await notifyUser({
 ```
 
 The service worker shows the notification and opens `url` (a path on this app) when it is tapped.
-Subscription endpoints are accepted only from the known push services (`src/lib/push.ts`), so a
+Subscription endpoints are accepted only from the known push services (`src/lib/push-subscription.ts`), so a
 client cannot make the Worker POST to an arbitrary address. The test button on the account page is
 capped by the `PUSH_TEST_LIMITER` rate limit binding. When the browser renews a subscription on its own, the service worker
 sends the new one to `/api/push/subscription`.
