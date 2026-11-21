@@ -1,9 +1,30 @@
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+
 import { defineConfig, lazyPlugins } from "vite-plus";
+
+/**
+ * React's `react-dom/server` for workerd (`server.edge.js`) is CommonJS that
+ * loads two renderers: the streaming one TanStack Start uses
+ * (`renderToReadableStream`) and the legacy `renderToString` one (~200 KB)
+ * nothing here calls. The Worker evaluates both at every cold start, so the
+ * production build points `react-dom/server` at the streaming one alone.
+ * `vp dev` keeps the package's own entry (and React's development build).
+ */
+const REACT_DOM_SERVER_EDGE = join(
+  dirname(createRequire(import.meta.url).resolve("react-dom/server.edge")),
+  "cjs",
+  "react-dom-server.edge.production.js",
+);
 
 // One file configures the whole Vite+ toolchain: the app build (`vp dev`,
 // `vp build`), the formatter (`fmt`), the linter (`lint`) and the pre-commit
 // checks (`staged`). The unit tests have their own `vitest.config.ts`.
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  resolve:
+    command === "build"
+      ? { alias: [{ find: /^react-dom\/server$/u, replacement: REACT_DOM_SERVER_EDGE }] }
+      : {},
   // `lazyPlugins` loads and builds the plugins only for `vp dev` / `vp build`:
   // `vp fmt`, `vp lint` and `vp check` read this file for the blocks below,
   // and importing the Cloudflare plugin alone takes seconds.
@@ -122,4 +143,4 @@ export default defineConfig({
     // Regenerate AI tool configurations when rulesync source files change.
     ".rulesync/**/*": () => "pnpm generate",
   },
-});
+}));
