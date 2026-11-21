@@ -41,7 +41,8 @@ an installable PWA and Web Push notifications — on the toolchain used by
   so a missing key fails the typecheck). The language is resolved on the server, so the first render
   is already in it: the user's saved choice (on the user row), then the `lang` cookie, then the
   browser's `Accept-Language` (any `ja*` is Japanese, anything else English). A switcher
-  (🌐 日本語 / English) sits on the account page and in the menu and switches at once.
+  (🌐 日本語 / English) sits on the account page — the one place to pick the language — and
+  switches at once.
 - **Phone UI rules** — popups fill a phone's screen (`Sheet`, `Drawer`; tablets get a centred dialog),
   no pinch zoom (viewport meta, `touch-action: pan-x pan-y` and iOS gesture events cancelled),
   form controls at least 16 px so iOS Safari never zooms into one, a spinner inside every button
