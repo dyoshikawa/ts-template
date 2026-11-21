@@ -82,6 +82,12 @@ test.describe("in English", () => {
     await page.getByRole("button", { name: "Menu", exact: true }).click();
     await expect(page.getByRole("navigation", { name: "ts-template" })).toBeVisible();
     expect(await japaneseLeft(page)).toEqual([]);
+    // The switcher lives on the account page only (ui-rule rule 11), not in the menu.
+    await expect(
+      page
+        .getByRole("navigation", { name: "ts-template" })
+        .getByRole("group", { name: "Language" }),
+    ).toHaveCount(0);
     await page
       .getByRole("navigation", { name: "ts-template" })
       .getByRole("button", { name: "Add to Home Screen" })
@@ -96,6 +102,7 @@ test.describe("in English", () => {
     await page.goto("/account");
     await expect(page.getByRole("heading", { name: "Account", exact: true })).toBeVisible();
     await expect(page).toHaveTitle("Account — ts-template");
+    await expect(page.getByRole("group", { name: "Language" })).toBeVisible();
     expect(await japaneseLeft(page)).toEqual([]);
     expect(await overflowsSideways(page)).toBe(false);
 

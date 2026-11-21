@@ -6,8 +6,8 @@ import * as z from "zod/mini";
 
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
+import { allMessagesFor } from "../i18n/all-messages";
 import { requestLanguage } from "../i18n/language";
-import { messagesFor } from "../i18n/messages";
 import { requireSession, requireUserId } from "./auth-server";
 import { notifyUser, saveSubscription, vapidKeys } from "./push";
 import { subscriptionInput } from "./push-subscription";
@@ -55,7 +55,9 @@ export const sendTestNotification = createServerFn({ method: "POST" }).handler(a
   const session = await requireSession();
   const userId = session.user.id;
   // In the user's language: the saved choice, else this page's.
-  const t = messagesFor(requestLanguage({ request, saved: session.user.language })).notifications;
+  const t = allMessagesFor(
+    requestLanguage({ request, saved: session.user.language }),
+  ).notifications;
   const { success } = await env.PUSH_TEST_LIMITER.limit({ key: userId });
   if (!success) {
     return { ok: false as const, reason: "rate-limited" as const };

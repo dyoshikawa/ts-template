@@ -5,9 +5,13 @@
  *
  * Better Auth answers `getSession` with `null` straight away when there is no
  * such cookie (with the cookie cache on), so without one the session is
- * known without loading Better Auth at all. Any cookie whose name ends in
- * `session_token` counts, so a false `true` only costs the full lookup; it
- * never skips one.
+ * known without loading Better Auth at all. Only the cookie's name is looked
+ * at, never its value: any name ending in `session_token` counts, so a false
+ * `true` only costs the full lookup; it never skips one. The cookie cache
+ * (`session_data`) alone is no session.
+ *
+ * Use it only to answer "signed out" early, never in front of `/api/auth/*`
+ * (signing in arrives without the cookie). Never treat a `true` as signed in.
  */
 export function hasSessionCookie(cookieHeader: string | null): boolean {
   if (!cookieHeader) {

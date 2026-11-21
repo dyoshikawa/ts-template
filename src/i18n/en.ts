@@ -1,4 +1,4 @@
-import { type Messages } from "./messages";
+import type { Messages } from "./ja";
 
 /** The English catalogue, typed against the Japanese one (`./ja.ts`). */
 export const en: Messages = {

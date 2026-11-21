@@ -41,8 +41,12 @@ an installable PWA and Web Push notifications — on the toolchain used by
   so a missing key fails the typecheck). The language is resolved on the server, so the first render
   is already in it: the user's saved choice (on the user row), then the `lang` cookie, then the
   browser's `Accept-Language` (any `ja*` is Japanese, anything else English). A switcher
-  (🌐 日本語 / English) sits on the account page — the one place to pick the language — and
-  switches at once.
+  (🌐 日本語 / English) sits on the account page — the one place to pick the language, never the
+  menu — and switches at once. Japanese ships with the app; English is a chunk of its own
+  (`loadMessages` in `src/i18n/messages.ts`), loaded before the root route renders in it, before
+  the router hydrates a page in it and before the switcher switches to it, and kept by the service
+  worker like any other build asset. Server mails and notifications read `allMessagesFor`
+  (`src/i18n/all-messages.ts`), which has both.
 - **Phone UI rules** — popups fill a phone's screen (`Sheet`, `Drawer`; tablets get a centred dialog),
   no pinch zoom (viewport meta, `touch-action: pan-x pan-y` and iOS gesture events cancelled),
   form controls at least 16 px so iOS Safari never zooms into one, a spinner inside every button
@@ -51,6 +55,7 @@ an installable PWA and Web Push notifications — on the toolchain used by
   the top, below the notch), and one おすすめ / Recommended label for the recommended means where
   several do the same thing (`src/components/recommended.tsx`: a badge and a display order that
   leaves the source list alone; `t.common.recommendedOption` for a select option's text).
+  Sign-in methods are outside this rule: neither the email code nor passkeys carry the label.
   `e2e/ui-rules.spec.ts` and `e2e/input-zoom.spec.ts` check them.
 
 ## What's included
@@ -137,15 +142,15 @@ Check the binding list `pnpm cf:dry-run` prints after every change.
    signs in by email only.
 6. Set the secrets with
    `pnpm exec cf workers secrets update <NAME> --worker <your-app> --type secret_text --text "<value>"`
-   (it needs the Worker to exist: on the first deploy run step 7 first; the app answers with an
+   (it needs the Worker to exist: on the first deploy run step 7 first; signing in answers with an
    error until `BETTER_AUTH_SECRET` is set):
 
-   | Secret                 | Purpose                                                                                    |
-   | ---------------------- | ------------------------------------------------------------------------------------------ |
-   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`, 32+ chars). Required: unset, pages fail. |
-   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens. Required: unset, every token fails.                             |
-   | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.                                |
-   | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone.                           |
+   | Secret                 | Purpose                                                                                       |
+   | ---------------------- | --------------------------------------------------------------------------------------------- |
+   | `BETTER_AUTH_SECRET`   | Signs session cookies (`openssl rand -base64 48`, 32+ chars). Required: unset, sign-in fails. |
+   | `TURNSTILE_SECRET_KEY` | Verifies Turnstile tokens. Required: unset, every token fails.                                |
+   | `VAPID_PRIVATE_KEY`    | Signs push messages; unset switches push notifications off.                                   |
+   | `ALLOWED_EMAILS`       | Comma-separated addresses allowed to sign in; unset lets anyone.                              |
 
 7. `pnpm run deploy` (not `pnpm deploy`, which is a pnpm built-in). To deploy from GitHub Actions,
    add the `CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template plus Account → D1 → Edit)
@@ -169,8 +174,24 @@ What the auth code enforces, so a change does not quietly drop one of them:
 - **The auth secret fails closed.** Outside `vp dev` and local requests, `resolveAuthSecret`
   (`src/lib/auth-secret.ts`) refuses to run when `BETTER_AUTH_SECRET` is unset, shorter than 32
   characters, or Better Auth's public default secret — Better Auth itself only refuses that default
-  when `NODE_ENV` is `production`, which a Worker never sets. Every page then answers with an error
-  until the secret is set. Local runs use a fixed development secret.
+  when `NODE_ENV` is `production`, which a Worker never sets. Signing in and every signed-in
+  request then answer with an error until the secret is set. Signed-out pages do not build Better
+  Auth (see below), so they keep working and do not show a missing secret: after setting the
+  secrets, check that `/api/auth/get-session` answers 200 (a post-deploy health check can do it).
+  Local runs use a fixed development secret.
+- **Signed out without Better Auth.** A request without a session token cookie is signed out
+  without loading Better Auth at all (`readSession` in `src/lib/auth-server.ts`,
+  `hasSessionCookie` in `src/lib/session-cookie.ts`): Better Auth answers no session for it
+  anyway, and skipping it keeps about 1 MB of code off a signed-out page's cold start. Only that
+  direction is short-cut, decided by the cookie's name alone (the `session_data` cookie cache
+  alone does not count) — with the cookie, Better Auth always decides. It never sits in front of
+  `/api/auth/*` (signing in arrives without the cookie) or the reads that go to the database
+  (`refreshSessionCache`, `deleteAccount`, `AUTHORITATIVE_SESSION_PATHS`, the push subscription
+  route). The app reads sessions from cookies only; adding a plugin that reads them from the
+  `Authorization` header (bearer, JWT, API keys, one-time tokens) means letting such requests
+  through there too, and renaming the session cookie means keeping a name that ends in
+  `session_token`. `auth.test.ts` pins Better Auth's side of this (cookie names, `null` without
+  the token): re-check it on Better Auth upgrades.
 - **Turnstile on sending a code.** Better Auth's `captcha` plugin guards
   `/email-otp/send-verification-otp` and expects the token in `x-captcha-response`, so bots cannot
   drive the mailer. Entering a code needs no challenge: the email OTP plugin spends a code after

@@ -1,5 +1,5 @@
+import { allMessagesFor } from "../i18n/all-messages";
 import { type Language } from "../i18n/language";
-import { messagesFor } from "../i18n/messages";
 import { escapeHtml, type OtpEmail } from "./otp-email";
 
 /**
@@ -19,7 +19,7 @@ export function buildPasskeyAddedEmail({
   accountUrl: string;
   language: Language;
 }): OtpEmail {
-  const t = messagesFor(language).email.passkeyAdded;
+  const t = allMessagesFor(language).email.passkeyAdded;
   const subject = t.subject({ app: appName });
   const text = [t.body({ name: passkeyName, app: appName }), "", t.warning, accountUrl].join("\n");
   const html = [

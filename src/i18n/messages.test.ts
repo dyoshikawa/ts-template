@@ -1,7 +1,12 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vite-plus/test";
 
+import { allMessagesFor } from "./all-messages";
 import { en } from "./en";
 import { ja } from "./ja";
+import { loadMessages, messagesFor, subscribeCatalogues } from "./messages";
 
 type Leaf = { path: string; value: unknown };
 
@@ -75,5 +80,52 @@ describe("message catalogues", () => {
       .map(({ path, value }) => ({ path, text: String(render(value)) }))
       .filter(({ text }) => !JAPANESE.test(text));
     expect(untranslated).toEqual([]);
+  });
+});
+
+describe("messagesFor", () => {
+  it("has Japanese at once and English once loaded, telling its subscribers", async () => {
+    // Nothing else in this file loads English, so it is not there yet.
+    expect(messagesFor("ja")).toBe(ja);
+    expect(messagesFor("en")).toBe(ja);
+    let told = 0;
+    const unsubscribe = subscribeCatalogues(() => {
+      told += 1;
+    });
+    await loadMessages("en");
+    expect(messagesFor("en")).toBe(en);
+    expect(told).toBe(1);
+    await loadMessages("en");
+    await loadMessages("ja");
+    expect(told).toBe(1);
+    unsubscribe();
+  });
+
+  it("leaves server mails and notifications both catalogues at hand", () => {
+    expect(allMessagesFor("ja")).toBe(ja);
+    expect(allMessagesFor("en")).toBe(en);
+  });
+});
+
+/** Every source file under src, tests left out. */
+function sources(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      return sources(path);
+    }
+    return /\.tsx?$/u.test(entry.name) && !/\.test\./u.test(entry.name) ? [path] : [];
+  });
+}
+
+describe("the English catalogue", () => {
+  it("is imported statically only by the server's all-messages", () => {
+    // A static import (`import { type … }` too, which stays as a bare
+    // import) would put it back into every page's client entry.
+    const root = join(import.meta.dirname, "..");
+    const importers = sources(root).filter((file) =>
+      /^import [^;]*from "(?:\.\/|(?:\.\.\/)+i18n\/)en"/mu.test(readFileSync(file, "utf8")),
+    );
+    expect(importers.map((file) => file.slice(root.length + 1))).toEqual(["i18n/all-messages.ts"]);
   });
 });

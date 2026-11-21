@@ -14,6 +14,7 @@ import { RouteError } from "../components/route-error";
 import { Snackbar } from "../components/snackbar";
 import { I18nProvider, useI18n } from "../i18n/i18n-context";
 import { type Language } from "../i18n/language";
+import { loadMessages } from "../i18n/messages";
 import { APP_NAME } from "../lib/app";
 import { getRootContext } from "../lib/auth-functions";
 import { listenForInstallOffers } from "../lib/install";
@@ -27,8 +28,15 @@ listenForInstallOffers();
 
 export const Route = createRootRoute({
   // Resolved once per navigation and exposed to every route as
-  // `context.session` and `context.language`.
-  beforeLoad: () => getRootContext(),
+  // `context.session` and `context.language`. The language's catalogue is
+  // loaded before anything renders in it (src/i18n/messages.ts).
+  beforeLoad: async () => {
+    const context = await getRootContext();
+    await loadMessages(context.language).catch(() => {
+      // Offline and never kept: the Japanese text stands in.
+    });
+    return context;
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

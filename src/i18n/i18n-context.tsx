@@ -1,9 +1,18 @@
 import { useRouter } from "@tanstack/react-router";
-import { createContext, type ReactNode, use, useCallback, useMemo, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { setLanguagePreference } from "../lib/language-functions";
 import { type Language, localeOf } from "./language";
-import { type Messages, messagesFor } from "./messages";
+import { loadMessages, type Messages, messagesFor, subscribeCatalogues } from "./messages";
 
 type I18n = {
   language: Language;
@@ -37,8 +46,24 @@ export function I18nProvider({
   const [override, setOverride] = useState<{ over: Language; to: Language } | null>(null);
   const language = override && override.over === resolved ? override.to : resolved;
 
+  // The root route loaded this catalogue before rendering; should a page
+  // still get here first (the root's own error page), the Japanese text
+  // shows until it arrives, then the page re-renders in its language.
+  const readMessages = () => messagesFor(language);
+  const t = useSyncExternalStore(subscribeCatalogues, readMessages, readMessages);
+  useEffect(() => {
+    void loadMessages(language).catch(() => {
+      // Offline and never kept: the Japanese text stays.
+    });
+  }, [language]);
+
   const setLanguage = useCallback(
     async (next: Language) => {
+      // Its catalogue first, so the page switches in one step (the service
+      // worker keeps the chunk like any other build asset).
+      await loadMessages(next).catch(() => {
+        // Offline and never kept: switch anyway; the Japanese text stands in.
+      });
       setOverride({ over: resolved, to: next });
       try {
         await setLanguagePreference({ data: { language: next } });
@@ -54,8 +79,8 @@ export function I18nProvider({
   );
 
   const value = useMemo(
-    () => ({ language, t: messagesFor(language), locale: localeOf(language), setLanguage }),
-    [language, setLanguage],
+    () => ({ language, t, locale: localeOf(language), setLanguage }),
+    [language, t, setLanguage],
   );
   return <I18nContext value={value}>{children}</I18nContext>;
 }
