@@ -102,9 +102,23 @@ describe("Drizzle on a cold start", () => {
       "routes/api/push/subscription.ts",
     ]) {
       const source = readFileSync(join(import.meta.dirname, "..", file), "utf8");
+      // Drizzle itself, the database modules, and the server-function files
+      // and libraries that import them (static imports, side-effect ones too).
       expect(source, file).not.toMatch(
-        /from "drizzle-orm|from "(?:\.\.?\/)+(?:db\/|lib\/)?(?:client|schema|push|verification-cleanup)"/u,
+        /(?:from |import )"(?:drizzle-orm|(?:\.\.?\/)+(?:db\/|lib\/)?(?:client|schema|auth|push|push-functions|account-functions|language-functions|verification-cleanup)(?:\.ts)?")/u,
       );
+    }
+  });
+
+  it("is not reached by the loaders of the pages a signed-out visitor opens", () => {
+    // A server function called while a page renders loads its file's whole
+    // handler chunk, so these routes call only the files kept free of it.
+    const allowed = new Set(["auth-functions", "public-config-functions"]);
+    for (const file of ["routes/__root.tsx", "routes/index.tsx", "routes/login.tsx"]) {
+      const source = readFileSync(join(import.meta.dirname, "..", file), "utf8");
+      for (const [, name] of source.matchAll(/from "\.\.\/lib\/([\w-]+-functions)(?:\.ts)?"/gu)) {
+        expect(allowed, `${file} imports ${name}`).toContain(name);
+      }
     }
   });
 });

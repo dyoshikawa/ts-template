@@ -11,6 +11,10 @@ import { otpIdentifiers } from "./otp-identifiers";
 import { passkeyConfig } from "./passkey";
 import { logTurnstileUnconfigured, turnstileConfig, verifyTurnstile } from "./turnstile";
 
+// The account page's server functions. They share one chunk with Drizzle and
+// the schema, so anything a signed-out page calls goes in
+// `public-config-functions.ts` instead.
+
 /**
  * How old a session may be to add a passkey: Better Auth's `freshAge`
  * default (a day from the sign-in), which its passkey plugin enforces.
