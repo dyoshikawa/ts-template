@@ -272,6 +272,9 @@ test("a sign-out that cannot reach the server says so and keeps the menu open", 
 
 const HOME_HEADING = "ts-template";
 
+/** Where the pulls start: in the header, inside the band at the top where a pull may begin. */
+const PULL_FROM = 40;
+
 /** Makes the page believe it runs as the installed app (CDP cannot emulate `display-mode`). */
 async function fakeStandalone(page: Page) {
   await page.addInitScript(() => {
@@ -321,30 +324,45 @@ test("in the installed app a long pull from the top reloads, nothing else does",
   test.setTimeout(90_000);
   await page.goto("/");
   // In a browser tab the browser's own pull-to-refresh is left alone.
-  expect(await pullDown({ page, y: 150, distance: 300 })).toBe(false);
+  expect(await pullDown({ page, y: PULL_FROM, distance: 300 })).toBe(false);
 
   await fakeStandalone(page);
   await page.reload();
   await expect(page.getByRole("heading", { name: HOME_HEADING })).toBeVisible();
-  // A short pull, then a long one.
-  expect(await pullDown({ page, y: 150, distance: 40 })).toBe(false);
-  expect(await pullDown({ page, y: 150, distance: 300 })).toBe(true);
+  // A short pull, then a long one, from the band at the top (the header).
+  expect(await pullDown({ page, y: PULL_FROM, distance: 40 })).toBe(false);
+  expect(await pullDown({ page, y: PULL_FROM, distance: 300 })).toBe(true);
   await expect(page.getByRole("heading", { name: HOME_HEADING })).toBeVisible();
+
+  // Not from lower down the page, even with the page at the top.
+  expect(await pullDown({ page, y: 150, distance: 300 })).toBe(false);
 
   // Not from a scrolled-down page.
   await page.evaluate(() => {
     document.body.style.minHeight = "3000px";
     window.scrollTo(0, 400);
   });
-  expect(await pullDown({ page, y: 150, distance: 300 })).toBe(false);
+  expect(await pullDown({ page, y: PULL_FROM, distance: 300 })).toBe(false);
   await page.evaluate(() => {
     window.scrollTo(0, 0);
+  });
+
+  // Not on something with a drag of its own (`touch-action: none`), even in the band.
+  await page.evaluate(() => {
+    const grip = document.createElement("div");
+    grip.id = "grip";
+    grip.style.cssText = "position:fixed;inset:0 0 auto;height:96px;touch-action:none;z-index:40";
+    document.body.appendChild(grip);
+  });
+  expect(await pullDown({ page, y: PULL_FROM, distance: 300 })).toBe(false);
+  await page.evaluate(() => {
+    document.querySelector("#grip")?.remove();
   });
 
   // Not inside an open popup (the menu here).
   await page.getByRole("button", { name: "メニュー", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "ts-template" })).toBeVisible();
-  expect(await pullDown({ page, y: 150, distance: 300 })).toBe(false);
+  expect(await pullDown({ page, y: PULL_FROM, distance: 300 })).toBe(false);
 });
 
 test("the pull indicator winds up, turns ready, spins on release and springs back", async ({
@@ -371,7 +389,7 @@ test("the pull indicator winds up, turns ready, spins on release and springs bac
   };
   const pullTo = async (distance: number) => {
     for (let step = 1; step <= 4; step += 1) {
-      await touch("touchMove", 150 + (distance * step) / 4);
+      await touch("touchMove", PULL_FROM + (distance * step) / 4);
     }
   };
   const shot = async (name: string) => {
@@ -379,7 +397,7 @@ test("the pull indicator winds up, turns ready, spins on release and springs bac
   };
 
   // 40 px: partly in view and partly wound up (135° of the 270°, scaled and faded in halfway).
-  await touch("touchStart", 150);
+  await touch("touchStart", PULL_FROM);
   await pullTo(40);
   await expect(indicator).toHaveAttribute("data-state", "pulling");
   await expect(icon).toHaveCSS("transform", /^matrix\(-0\.70/);
@@ -440,7 +458,7 @@ test("the pull indicator winds up, turns ready, spins on release and springs bac
   await page.evaluate(() => {
     Object.assign(window, { notReloaded: true });
   });
-  await touch("touchStart", 150);
+  await touch("touchStart", PULL_FROM);
   await pullTo(40);
   await expect(indicator).toHaveAttribute("data-state", "pulling");
   await touch("touchEnd");
@@ -451,7 +469,7 @@ test("the pull indicator winds up, turns ready, spins on release and springs bac
 
   // With reduced motion the icon does not turn or scale; it only shows.
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await touch("touchStart", 150);
+  await touch("touchStart", PULL_FROM);
   await pullTo(120);
   await expect(indicator).toHaveAttribute("data-state", "ready");
   await expect(icon).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");

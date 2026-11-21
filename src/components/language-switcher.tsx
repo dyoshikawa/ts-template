@@ -8,9 +8,8 @@ import { BUTTON_EMOJI } from "./ui";
 /**
  * 「🌐 日本語 / English」: switches the whole app at once, without leaving the
  * screen, and remembers the choice (`setLanguagePreference`). Shown on the
- * account page and in the menu. The switch shows before the server has
- * saved it; a failed save switches back and says so in the snackbar, with a
- * retry.
+ * account page only. The switch shows before the server has saved it; a
+ * failed save switches back and says so in the snackbar, with a retry.
  */
 export function LanguageSwitcher({ className = "" }: { className?: string }) {
   const { language, setLanguage, t, locale } = useI18n();

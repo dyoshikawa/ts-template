@@ -3,10 +3,11 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useI18n } from "../i18n/i18n-context";
 import {
   isStandalone,
-  NO_PULL_SELECTOR,
+  pullBlockedAt,
   pullDistance,
   pullFrame,
   releaseReloads,
+  startsInPullBand,
 } from "../lib/pull-to-reload";
 
 /** How long (ms) a cancelled pull takes to spring back out of view (matches styles.css). */
@@ -18,7 +19,8 @@ const HIDDEN_OFFSET = -48;
 /**
  * Pull down to reload, for the installed app only: a browser tab has its
  * own pull-to-refresh, which standalone mode loses (iOS has none there). A
- * one-finger pull that starts with the page at the very top, outside popups,
+ * one-finger pull that starts with the page at the very top, in the band at
+ * the top of the screen (the header and a little under it), outside popups,
  * the open menu and scrolled inner lists, slides a round reload badge down
  * after the finger, winding its icon up; past the threshold it turns ready
  * (accent color, a pop, "Release to reload"), and a release there keeps it
@@ -48,6 +50,12 @@ export function PullToReload() {
     let reducedMotion = false;
     let frame = 0;
     let springBack = 0;
+    // The top safe area, measured once and again when the screen turns or
+    // resizes, not on every tap.
+    let safeTop = safeAreaTop();
+    const remeasure = () => {
+      safeTop = safeAreaTop();
+    };
     // Whether this gesture has drawn the badge, which a cancel must then put away.
     let shown = false;
 
@@ -130,7 +138,11 @@ export function PullToReload() {
         return;
       }
       start =
-        event.touches.length === 1 && touch && canStartAt(event.target) && window.scrollY <= 0
+        event.touches.length === 1 &&
+        touch &&
+        window.scrollY <= 0 &&
+        startsInPullBand({ y: touch.clientY, safeTop }) &&
+        canStartAt(event.target)
           ? { y: touch.clientY, id: touch.identifier }
           : null;
       current = 0;
@@ -173,6 +185,7 @@ export function PullToReload() {
     window.addEventListener("touchmove", onMove, { passive: true });
     window.addEventListener("touchend", onEnd);
     window.addEventListener("touchcancel", onEnd);
+    window.addEventListener("resize", remeasure);
     return () => {
       documentElement.style.overscrollBehaviorY = previous;
       cancelAnimationFrame(frame);
@@ -181,6 +194,7 @@ export function PullToReload() {
       window.removeEventListener("touchmove", onMove);
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("touchcancel", onEnd);
+      window.removeEventListener("resize", remeasure);
     };
   }, [enabled]);
 
@@ -239,15 +253,18 @@ function runsInstalled(): boolean {
   });
 }
 
+/** The top safe area (a notch, the status bar) in px, read through a probe's padding. */
+function safeAreaTop(): number {
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "position:fixed;top:0;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px)";
+  document.body.appendChild(probe);
+  const top = Number.parseFloat(getComputedStyle(probe).paddingTop) || 0;
+  probe.remove();
+  return top;
+}
+
 /** A pull may start only on the page itself, not inside anything with its own scroll or drag. */
 function canStartAt(target: EventTarget | null): boolean {
-  if (!(target instanceof Element) || target.closest(NO_PULL_SELECTOR)) {
-    return false;
-  }
-  for (let element: Element | null = target; element; element = element.parentElement) {
-    if (element.scrollTop > 0) {
-      return false;
-    }
-  }
-  return true;
+  return target instanceof Element && !pullBlockedAt(target);
 }

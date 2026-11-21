@@ -19,6 +19,19 @@ export function pullDistance(dy: number): number {
   return Math.max(0, dy);
 }
 
+/**
+ * How far (px) below the top safe area a finger may be put down to start a
+ * pull: the header and a little under it. A downward swipe that starts lower
+ * on the page never reloads, even with the page at the top: a pull from
+ * anywhere reloads too easily.
+ */
+const PULL_BAND = 96;
+
+/** Whether a finger put down at `y` (px from the top edge) may start a pull, below a `safeTop` px notch. */
+export function startsInPullBand({ y, safeTop }: { y: number; safeTop: number }): boolean {
+  return y <= safeTop + PULL_BAND;
+}
+
 /** Whether releasing at this pull reloads the page. */
 export function releaseReloads(pull: number): boolean {
   return pull >= PULL_THRESHOLD;
@@ -80,8 +93,43 @@ export function isStandalone({
 }
 
 /**
- * Where a pull may not start: popups, the open menu, form fields, canvases
- * and anything else marked `data-no-pull` (its own drag or scroll).
+ * Where a pull may not start: popups, the open menu, form fields, editable
+ * text, canvases and anything else marked `data-no-pull` (its own drag or
+ * scroll).
  */
-export const NO_PULL_SELECTOR =
-  "dialog, [role=dialog], [aria-modal=true], [data-no-pull], canvas, input, textarea, select";
+const NO_PULL_SELECTOR =
+  "dialog, [role=dialog], [aria-modal=true], [data-no-pull], canvas, input, textarea, select, [contenteditable]:not([contenteditable=false])";
+
+/**
+ * Whether a pull may not start at `target`: it sits in a popup, the menu or a
+ * form field (`NO_PULL_SELECTOR`), in something scrolled down, which the
+ * finger scrolls back first, or in something that takes a vertical drag
+ * itself (`touchTakesVerticalDrag`: an area picker, an order handle, a resize
+ * grip, a horizontal slider), so a drag down on it is never taken for a pull.
+ */
+export function pullBlockedAt(target: Element): boolean {
+  if (target.closest(NO_PULL_SELECTOR)) {
+    return true;
+  }
+  for (let element: Element | null = target; element; element = element.parentElement) {
+    if (element.scrollTop > 0 || touchTakesVerticalDrag(getComputedStyle(element).touchAction)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether an element with this computed `touch-action` handles a vertical
+ * drag in its own script: anything that does not let the browser pan the
+ * page vertically (`none`, `pan-x`, `pinch-zoom`, …). `auto`, `manipulation`
+ * and values with `pan-y`/`pan-down` (the page's own `pan-x pan-y`) do.
+ */
+function touchTakesVerticalDrag(touchAction: string): boolean {
+  return (
+    touchAction !== "" &&
+    touchAction !== "auto" &&
+    touchAction !== "manipulation" &&
+    !/\bpan-(?:y|down)\b/u.test(touchAction)
+  );
+}
