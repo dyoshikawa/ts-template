@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { isLocalRequest } from "./local-request";
+import { isLocalRequest, isLocalRun } from "./local-request";
 
 describe("isLocalRequest", () => {
   it("is true for a local hostname or a loopback client", () => {
@@ -25,5 +25,22 @@ describe("isLocalRequest", () => {
       ),
     ).toBe(false);
     expect(isLocalRequest(new Request("https://app.example.com/"))).toBe(false);
+  });
+});
+
+describe("isLocalRun", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is true under the dev server whatever the request", () => {
+    vi.stubEnv("DEV", true);
+    expect(isLocalRun(new Request("https://app.example.com/"))).toBe(true);
+  });
+
+  it("otherwise follows isLocalRequest", () => {
+    vi.stubEnv("DEV", false);
+    expect(isLocalRun(new Request("http://localhost:4173/"))).toBe(true);
+    expect(isLocalRun(new Request("https://app.example.com/"))).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 
-import { isLocalRequest } from "./local-request";
+import { isLocalRun } from "./local-request";
 
 /**
  * Whether passkeys are offered for a request, and for which relying party.
@@ -28,7 +28,7 @@ const LOCAL_ORIGINS = ["http://localhost:4173", "http://localhost:5173"];
 
 export function passkeyConfig({ request }: { request: Request }): PasskeyConfig {
   // Checked first: the emulator rewrites the URL to the custom domain.
-  if (import.meta.env.DEV || isLocalRequest(request)) {
+  if (isLocalRun(request)) {
     return { status: "enabled", rpID: "localhost", origin: LOCAL_ORIGINS };
   }
   const rpID = env.PASSKEY_RP_ID?.trim();

@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 
-import { isLocalRequest } from "./local-request";
+import { isLocalRequest, isLocalRun } from "./local-request";
 
 /**
  * Cloudflare's documented test keys: the widget always passes and the secret
@@ -48,7 +48,7 @@ export function turnstileConfig({ request }: { request: Request }): TurnstileCon
   if (turnstileDisabled({ request })) {
     return { status: "disabled" };
   }
-  if (import.meta.env.DEV || isLocalRequest(request)) {
+  if (isLocalRun(request)) {
     return {
       status: "enabled",
       siteKey: env.TURNSTILE_SITE_KEY || TEST_SITE_KEY,
@@ -79,7 +79,7 @@ export type TurnstileAction = "sign-in" | "delete-account";
  * been solved on the hostname the request is served from.
  */
 export function turnstileBinding({ request }: { request: Request }): { hostname: string } | null {
-  if (import.meta.env.DEV || isLocalRequest(request)) {
+  if (isLocalRun(request)) {
     return null;
   }
   return { hostname: new URL(request.url).hostname };
