@@ -41,8 +41,8 @@ an installable PWA and Web Push notifications — on the toolchain used by
   so a missing key fails the typecheck). The language is resolved on the server, so the first render
   is already in it: the user's saved choice (on the user row), then the `lang` cookie, then the
   browser's `Accept-Language` (any `ja*` is Japanese, anything else English). A switcher
-  (🌐 日本語 / English) sits on the account page — the one place to pick the language — and
-  switches at once. Japanese ships with the app; English is a chunk of its own
+  (🌐 日本語 / English) sits on the account page — the one place to pick the language, never the
+  menu — and switches at once. Japanese ships with the app; English is a chunk of its own
   (`loadMessages` in `src/i18n/messages.ts`), loaded before the root route renders in it, before
   the router hydrates a page in it and before the switcher switches to it, and kept by the service
   worker like any other build asset. Server mails and notifications read `allMessagesFor`
