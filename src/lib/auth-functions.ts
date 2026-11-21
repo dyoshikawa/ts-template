@@ -1,14 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest, setCookie } from "@tanstack/react-start/server";
+import { getRequest } from "@tanstack/react-start/server";
 
-import {
-  type Language,
-  LANGUAGE_COOKIE,
-  LANGUAGE_COOKIE_MAX_AGE,
-  languageFromCookie,
-  requestLanguage,
-} from "../i18n/language";
+import { type Language, languageFromCookie, requestLanguage } from "../i18n/language";
 import { readSession } from "./auth-server";
+import { setLanguageCookie } from "./language-cookie";
 
 /**
  * What every route needs before it renders, read once per navigation: the
@@ -34,12 +29,7 @@ export const getRootContext = createServerFn({ method: "GET" }).handler(async ()
   // The cookie follows the saved choice, so server code that only has the
   // request (the sign-in mail, a passkey notice) speaks it as well.
   if (session?.user.language && languageFromCookie(request.headers.get("cookie")) !== language) {
-    setCookie(LANGUAGE_COOKIE, language, {
-      path: "/",
-      maxAge: LANGUAGE_COOKIE_MAX_AGE,
-      sameSite: "lax",
-      secure: new URL(request.url).protocol === "https:",
-    });
+    setLanguageCookie({ request, language });
   }
   return { session, language };
 });
