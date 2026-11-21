@@ -19,6 +19,19 @@ export function pullDistance(dy: number): number {
   return Math.max(0, dy);
 }
 
+/**
+ * How far (px) below the top safe area a finger may be put down to start a
+ * pull: the header and a little under it. A downward swipe that starts lower
+ * on the page never reloads, even with the page at the top (owner's decision
+ * 2026-11-05: a pull from anywhere reloaded too easily).
+ */
+const PULL_BAND = 96;
+
+/** Whether a finger put down at `y` (px from the top edge) may start a pull, below a `safeTop` px notch. */
+export function startsInPullBand({ y, safeTop }: { y: number; safeTop: number }): boolean {
+  return y <= safeTop + PULL_BAND;
+}
+
 /** Whether releasing at this pull reloads the page. */
 export function releaseReloads(pull: number): boolean {
   return pull >= PULL_THRESHOLD;

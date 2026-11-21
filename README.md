@@ -46,7 +46,8 @@ an installable PWA and Web Push notifications — on the toolchain used by
   no pinch zoom (viewport meta, `touch-action: pan-x pan-y` and iOS gesture events cancelled),
   form controls at least 16 px so iOS Safari never zooms into one, a spinner inside every button
   that waits on the server (never a full-screen block), one emoji per action (`BUTTON_EMOJI`), and
-  pull down to reload in the installed app (`PullToReload`). `e2e/ui-rules.spec.ts` and
+  pull down to reload in the installed app (`PullToReload`; only a pull that starts within 96 px of
+  the top, below the notch). `e2e/ui-rules.spec.ts` and
   `e2e/input-zoom.spec.ts` check them.
 
 ## What's included

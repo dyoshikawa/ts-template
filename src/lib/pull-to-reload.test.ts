@@ -6,12 +6,23 @@ import {
   pullDistance,
   pullFrame,
   releaseReloads,
+  startsInPullBand,
 } from "./pull-to-reload";
 
 describe("pullDistance", () => {
   it("follows the finger down and is nothing when it moved up", () => {
     expect(pullDistance(100)).toBe(100);
     expect(pullDistance(-50)).toBe(0);
+  });
+});
+
+describe("startsInPullBand", () => {
+  it("lets a pull start only within 96 px of the top edge, below the safe area", () => {
+    expect(startsInPullBand({ y: 0, safeTop: 0 })).toBe(true);
+    expect(startsInPullBand({ y: 96, safeTop: 0 })).toBe(true);
+    expect(startsInPullBand({ y: 97, safeTop: 0 })).toBe(false);
+    expect(startsInPullBand({ y: 130, safeTop: 47 })).toBe(true);
+    expect(startsInPullBand({ y: 144, safeTop: 47 })).toBe(false);
   });
 });
 
