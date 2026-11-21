@@ -93,8 +93,28 @@ export function isStandalone({
 }
 
 /**
- * Where a pull may not start: popups, the open menu, form fields, canvases
- * and anything else marked `data-no-pull` (its own drag or scroll).
+ * Where a pull may not start: popups, the open menu, form fields, editable
+ * text, canvases and anything else marked `data-no-pull` (its own drag or
+ * scroll).
  */
-export const NO_PULL_SELECTOR =
-  "dialog, [role=dialog], [aria-modal=true], [data-no-pull], canvas, input, textarea, select";
+const NO_PULL_SELECTOR =
+  "dialog, [role=dialog], [aria-modal=true], [data-no-pull], canvas, input, textarea, select, [contenteditable]:not([contenteditable=false])";
+
+/**
+ * Whether a pull may not start at `target`: it sits in a popup, the menu or a
+ * form field (`NO_PULL_SELECTOR`), in something scrolled down, which the
+ * finger scrolls back first, or in something that takes the finger itself
+ * with `touch-action: none` (an area picker, an order handle, a resize grip),
+ * so a drag down on it is never taken for a pull.
+ */
+export function pullBlockedAt(target: Element): boolean {
+  if (target.closest(NO_PULL_SELECTOR)) {
+    return true;
+  }
+  for (let element: Element | null = target; element; element = element.parentElement) {
+    if (element.scrollTop > 0 || getComputedStyle(element).touchAction === "none") {
+      return true;
+    }
+  }
+  return false;
+}

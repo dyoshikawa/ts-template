@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import {
   isStandalone,
   PULL_THRESHOLD,
+  pullBlockedAt,
   pullDistance,
   pullFrame,
   releaseReloads,
@@ -95,5 +96,48 @@ describe("isStandalone", () => {
     expect(
       isStandalone({ matchMedia: media("(display-mode: browser)"), navigatorStandalone: false }),
     ).toBe(false);
+  });
+});
+
+/** The innermost element of `html`, put in the page. */
+function inside(html: string): Element {
+  document.body.innerHTML = html;
+  let element: Element = document.body;
+  while (element.lastElementChild) {
+    element = element.lastElementChild;
+  }
+  return element;
+}
+
+describe("pullBlockedAt", () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it("lets a pull start on the page itself", () => {
+    expect(pullBlockedAt(inside("<header><a href='/'>Home</a></header>"))).toBe(false);
+  });
+
+  it("keeps it out of popups, the open menu and form fields", () => {
+    expect(pullBlockedAt(inside("<dialog open><p>Body</p></dialog>"))).toBe(true);
+    expect(pullBlockedAt(inside("<div data-no-pull><a href='/'>Home</a></div>"))).toBe(true);
+    expect(pullBlockedAt(inside("<label><input></label>"))).toBe(true);
+    expect(pullBlockedAt(inside("<div contenteditable='true'><p>Text</p></div>"))).toBe(true);
+  });
+
+  it("keeps it out of anything with a drag of its own, such as an area picker", () => {
+    expect(
+      pullBlockedAt(inside("<div style='touch-action: none'><div><span>Grip</span></div></div>")),
+    ).toBe(true);
+  });
+
+  it("keeps it out of a scrolled-down inner list", () => {
+    const row = inside("<ul><li>Row</li></ul>");
+    const list = row.parentElement;
+    if (list) {
+      // jsdom lays nothing out, so the scroll offset is set by hand.
+      Object.defineProperty(list, "scrollTop", { value: 40 });
+    }
+    expect(pullBlockedAt(row)).toBe(true);
   });
 });

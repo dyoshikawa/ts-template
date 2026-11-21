@@ -347,6 +347,18 @@ test("in the installed app a long pull from the top reloads, nothing else does",
     window.scrollTo(0, 0);
   });
 
+  // Not on something with a drag of its own (`touch-action: none`), even in the band.
+  await page.evaluate(() => {
+    const grip = document.createElement("div");
+    grip.id = "grip";
+    grip.style.cssText = "position:fixed;inset:0 0 auto;height:96px;touch-action:none;z-index:40";
+    document.body.appendChild(grip);
+  });
+  expect(await pullDown({ page, y: PULL_FROM, distance: 300 })).toBe(false);
+  await page.evaluate(() => {
+    document.querySelector("#grip")?.remove();
+  });
+
   // Not inside an open popup (the menu here).
   await page.getByRole("button", { name: "メニュー", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "ts-template" })).toBeVisible();

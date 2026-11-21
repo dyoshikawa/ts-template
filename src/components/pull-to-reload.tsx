@@ -3,7 +3,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useI18n } from "../i18n/i18n-context";
 import {
   isStandalone,
-  NO_PULL_SELECTOR,
+  pullBlockedAt,
   pullDistance,
   pullFrame,
   releaseReloads,
@@ -258,13 +258,5 @@ function safeAreaTop(): number {
 
 /** A pull may start only on the page itself, not inside anything with its own scroll or drag. */
 function canStartAt(target: EventTarget | null): boolean {
-  if (!(target instanceof Element) || target.closest(NO_PULL_SELECTOR)) {
-    return false;
-  }
-  for (let element: Element | null = target; element; element = element.parentElement) {
-    if (element.scrollTop > 0) {
-      return false;
-    }
-  }
-  return true;
+  return target instanceof Element && !pullBlockedAt(target);
 }
