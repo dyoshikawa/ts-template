@@ -55,6 +55,7 @@ an installable PWA and Web Push notifications — on the toolchain used by
   the top, below the notch), and one おすすめ / Recommended label for the recommended means where
   several do the same thing (`src/components/recommended.tsx`: a badge and a display order that
   leaves the source list alone; `t.common.recommendedOption` for a select option's text).
+  Sign-in methods are outside this rule: neither the email code nor passkeys carry the label.
   `e2e/ui-rules.spec.ts` and `e2e/input-zoom.spec.ts` check them.
 
 ## What's included

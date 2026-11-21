@@ -8,6 +8,8 @@ import { Emoji } from "./spinner";
 // docs; labelling it changes nothing that is stored or picked by default.
 // Inside a `<select>`, where no badge fits, the option's text is
 // `t.common.recommendedOption({ label })`, e.g. 「Remove.bg（おすすめ）」.
+// Sign-in methods are outside the rule: neither the email code nor passkeys
+// carry the label.
 
 /** The badge beside the recommended means on a chip, a radio or a button. */
 export function RecommendedBadge() {

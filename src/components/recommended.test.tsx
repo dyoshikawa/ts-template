@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
@@ -44,5 +47,14 @@ describe("recommendedFirst", () => {
     expect(recommendedFirst({ items: means, isRecommended: () => false })).toEqual(["a", "b"]);
     recommendedFirst({ items: means, isRecommended: (item) => item === "b" });
     expect(means).toEqual(["a", "b"]);
+  });
+});
+
+describe("the sign-in methods", () => {
+  it("carry no おすすめ label (outside ui-rule 15)", () => {
+    for (const file of ["routes/login.tsx", "components/passkey-offer.tsx"]) {
+      const source = readFileSync(join(import.meta.dirname, "..", file), "utf8");
+      expect(source, file).not.toMatch(/recommended/iu);
+    }
   });
 });
