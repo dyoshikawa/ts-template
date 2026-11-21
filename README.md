@@ -42,7 +42,11 @@ an installable PWA and Web Push notifications — on the toolchain used by
   is already in it: the user's saved choice (on the user row), then the `lang` cookie, then the
   browser's `Accept-Language` (any `ja*` is Japanese, anything else English). A switcher
   (🌐 日本語 / English) sits on the account page — the one place to pick the language — and
-  switches at once.
+  switches at once. Japanese ships with the app; English is a chunk of its own
+  (`loadMessages` in `src/i18n/messages.ts`), loaded before the root route renders in it, before
+  the router hydrates a page in it and before the switcher switches to it, and kept by the service
+  worker like any other build asset. Server mails and notifications read `allMessagesFor`
+  (`src/i18n/all-messages.ts`), which has both.
 - **Phone UI rules** — popups fill a phone's screen (`Sheet`, `Drawer`; tablets get a centred dialog),
   no pinch zoom (viewport meta, `touch-action: pan-x pan-y` and iOS gesture events cancelled),
   form controls at least 16 px so iOS Safari never zooms into one, a spinner inside every button

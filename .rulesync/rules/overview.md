@@ -26,7 +26,9 @@ notifications. The UI speaks Japanese (the default) and English.
   component. The language is resolved on the server (saved choice, `lang` cookie, then
   `Accept-Language`); the server sends codes, not messages, and the page translates them. Format
   dates and numbers with `Intl` in `locale` from `useI18n()`. e2e reads the Japanese text;
-  `e2e/i18n.spec.ts` checks the English screens.
+  `e2e/i18n.spec.ts` checks the English screens. Pages get English on demand
+  (`loadMessages` in `src/i18n/messages.ts`); server mails and notifications use
+  `allMessagesFor` (`src/i18n/all-messages.ts`). Only that file may import `en.ts` statically.
 - The owner's UI rules hold on every screen (`e2e/ui-rules.spec.ts`): popups fill a phone's screen
   (`Sheet`, `Drawer`), no pinch zoom, a spinner in the button for every wait on the server
   (`BusyLabel`, never a full-screen block), one emoji per action (`BUTTON_EMOJI`), and pull to

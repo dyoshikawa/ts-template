@@ -226,3 +226,6 @@ export const ja = {
     },
   },
 };
+
+/** The shape of a catalogue: the Japanese one's, which the English one must match. */
+export type Messages = typeof ja;

@@ -1,5 +1,5 @@
+import { allMessagesFor } from "../i18n/all-messages";
 import { type Language } from "../i18n/language";
-import { messagesFor } from "../i18n/messages";
 import { formatOtp } from "./otp-code";
 
 /** A mail the app sends: subject plus plain-text and HTML bodies. */
@@ -21,7 +21,7 @@ export function buildOtpEmail({
   expiresInMinutes: number;
   language: Language;
 }): OtpEmail {
-  const t = messagesFor(language).email.otp;
+  const t = allMessagesFor(language).email.otp;
   const code = formatOtp(otp);
   const subject = t.subject({ code, app: appName });
   const text = [
