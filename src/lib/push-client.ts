@@ -2,6 +2,7 @@
  * Push notifications on this device: whether they can work here, and turning
  * them on and off. Browser-only; the server side is src/lib/push-functions.ts.
  */
+import { isIos, runsInstalled } from "./install";
 import { deletePushSubscription, savePushSubscription } from "./push-functions";
 
 /**
@@ -14,14 +15,6 @@ import { deletePushSubscription, savePushSubscription } from "./push-functions";
  * - `ready`: notifications can be turned on.
  */
 export type PushSupport = "unsupported" | "install-first" | "no-worker" | "ready";
-
-const isIos = (): boolean =>
-  /iPad|iPhone|iPod/u.test(navigator.userAgent) ||
-  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-const runsInstalled = (): boolean =>
-  window.matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches ||
-  (navigator as { standalone?: boolean }).standalone === true;
 
 export async function pushSupport(): Promise<PushSupport> {
   const hasApi =
