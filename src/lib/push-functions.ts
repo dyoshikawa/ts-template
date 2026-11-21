@@ -9,7 +9,8 @@ import * as schema from "../db/schema";
 import { requestLanguage } from "../i18n/language";
 import { messagesFor } from "../i18n/messages";
 import { requireSession, requireUserId } from "./auth-server";
-import { notifyUser, saveSubscription, subscriptionInput, vapidKeys } from "./push";
+import { notifyUser, saveSubscription, vapidKeys } from "./push";
+import { subscriptionInput } from "./push-subscription";
 
 /** The public VAPID key browsers subscribe with; empty while push is not configured. */
 export const getPushConfig = createServerFn({ method: "GET" }).handler(async () => {

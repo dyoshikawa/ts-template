@@ -82,3 +82,29 @@ describe("Better Auth on a cold start", () => {
     }
   });
 });
+
+/**
+ * Drizzle and the schema (about 150 KB of the Worker's code) are needed only
+ * by requests that touch the database. The Worker's entry is evaluated on
+ * every cold start, the route tree (server routes included) and the sign-in
+ * page's server functions are loaded by every signed-out page, so they reach
+ * the database code only inside the handlers that need it.
+ */
+describe("Drizzle on a cold start", () => {
+  it("is imported on demand by the entry, the server routes and the public server functions", () => {
+    for (const file of [
+      "server.ts",
+      "lib/auth-server.ts",
+      "lib/auth-functions.ts",
+      "lib/public-config-functions.ts",
+      "lib/push-subscription.ts",
+      "routes/api/auth/$.ts",
+      "routes/api/push/subscription.ts",
+    ]) {
+      const source = readFileSync(join(import.meta.dirname, "..", file), "utf8");
+      expect(source, file).not.toMatch(
+        /from "drizzle-orm|from "(?:\.\.?\/)+(?:db\/|lib\/)?(?:client|schema|push|verification-cleanup)"/u,
+      );
+    }
+  });
+});

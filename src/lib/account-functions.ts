@@ -9,25 +9,7 @@ import * as schema from "../db/schema";
 import { loadCreateAuth, requireSession } from "./auth-server";
 import { otpIdentifiers } from "./otp-identifiers";
 import { passkeyConfig } from "./passkey";
-import {
-  logTurnstileUnconfigured,
-  turnstileClientConfig,
-  turnstileConfig,
-  verifyTurnstile,
-} from "./turnstile";
-
-/** What the Turnstile widgets render from (never the secret); public, so no session is needed. */
-export const getTurnstileConfig = createServerFn({ method: "GET" }).handler(async () => {
-  return { turnstile: turnstileClientConfig({ request: getRequest() }) };
-});
-
-/**
- * Whether this host offers passkeys (see `passkeyConfig`); the pages hide
- * every passkey control when it does not. Public, so no session is needed.
- */
-export const getPasskeyAvailability = createServerFn({ method: "GET" }).handler(async () => {
-  return { passkeys: passkeyConfig({ request: getRequest() }).status === "enabled" };
-});
+import { logTurnstileUnconfigured, turnstileConfig, verifyTurnstile } from "./turnstile";
 
 /**
  * How old a session may be to add a passkey: Better Auth's `freshAge`
@@ -72,8 +54,8 @@ export const deleteAccount = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const request = getRequest();
-    // Loaded here, so the sign-in page's server functions in this file do
-    // not load Better Auth (see `readSession`).
+    // Loaded here, so the account page's other server functions in this
+    // file do not load Better Auth before they need it (see `readSession`).
     const auth = (await loadCreateAuth())({ request });
     // Read from the database, not the 5-minute cookie cache: a session signed
     // out or revoked elsewhere must not delete the account.

@@ -3,7 +3,6 @@ import { env } from "cloudflare:workers";
 
 import { CSP_NONCE_HEADER } from "./lib/csp-nonce";
 import { createNonce, withSecurityHeaders } from "./lib/security-headers";
-import { deleteExpiredVerifications } from "./lib/verification-cleanup";
 
 /**
  * The Worker's entry: TanStack Start answers requests with the security
@@ -12,7 +11,9 @@ import { deleteExpiredVerifications } from "./lib/verification-cleanup";
  * scripts of its own, so it runs without the policy. The Cron Trigger
  * (`triggers` in `cloudflare.config.ts`, nightly) clears expired sign-in
  * codes and passkey challenges; add more scheduled work or a `queue` handler
- * here when the app needs them.
+ * here when the app needs them. Their code is imported inside the handler:
+ * this module is evaluated on every cold start, and a static import would
+ * load Drizzle and the schema for requests that never touch the database.
  */
 export default {
   fetch: async (request: Request) => {
@@ -26,13 +27,17 @@ export default {
   },
   scheduled: async (controller, _env, ctx) => {
     ctx.waitUntil(
-      deleteExpiredVerifications({
-        d1: env.DB,
-        now: new Date(controller.scheduledTime),
-      }).then((result) => {
-        // oxlint-disable-next-line no-console
-        console.info("[cron] expired verifications deleted", JSON.stringify(result));
-      }),
+      import("./lib/verification-cleanup")
+        .then(({ deleteExpiredVerifications }) =>
+          deleteExpiredVerifications({
+            d1: env.DB,
+            now: new Date(controller.scheduledTime),
+          }),
+        )
+        .then((result) => {
+          // oxlint-disable-next-line no-console
+          console.info("[cron] expired verifications deleted", JSON.stringify(result));
+        }),
     );
   },
 } satisfies ExportedHandler<Env>;
