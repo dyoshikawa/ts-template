@@ -22,8 +22,8 @@ export function pullDistance(dy: number): number {
 /**
  * How far (px) below the top safe area a finger may be put down to start a
  * pull: the header and a little under it. A downward swipe that starts lower
- * on the page never reloads, even with the page at the top (owner's decision
- * 2026-11-05: a pull from anywhere reloaded too easily).
+ * on the page never reloads, even with the page at the top: a pull from
+ * anywhere reloads too easily.
  */
 const PULL_BAND = 96;
 
@@ -103,18 +103,33 @@ const NO_PULL_SELECTOR =
 /**
  * Whether a pull may not start at `target`: it sits in a popup, the menu or a
  * form field (`NO_PULL_SELECTOR`), in something scrolled down, which the
- * finger scrolls back first, or in something that takes the finger itself
- * with `touch-action: none` (an area picker, an order handle, a resize grip),
- * so a drag down on it is never taken for a pull.
+ * finger scrolls back first, or in something that takes a vertical drag
+ * itself (`touchTakesVerticalDrag`: an area picker, an order handle, a resize
+ * grip, a horizontal slider), so a drag down on it is never taken for a pull.
  */
 export function pullBlockedAt(target: Element): boolean {
   if (target.closest(NO_PULL_SELECTOR)) {
     return true;
   }
   for (let element: Element | null = target; element; element = element.parentElement) {
-    if (element.scrollTop > 0 || getComputedStyle(element).touchAction === "none") {
+    if (element.scrollTop > 0 || touchTakesVerticalDrag(getComputedStyle(element).touchAction)) {
       return true;
     }
   }
   return false;
+}
+
+/**
+ * Whether an element with this computed `touch-action` handles a vertical
+ * drag in its own script: anything that does not let the browser pan the
+ * page vertically (`none`, `pan-x`, `pinch-zoom`, …). `auto`, `manipulation`
+ * and values with `pan-y`/`pan-down` (the page's own `pan-x pan-y`) do.
+ */
+function touchTakesVerticalDrag(touchAction: string): boolean {
+  return (
+    touchAction !== "" &&
+    touchAction !== "auto" &&
+    touchAction !== "manipulation" &&
+    !/\bpan-(?:y|down)\b/u.test(touchAction)
+  );
 }

@@ -23,6 +23,7 @@ describe("startsInPullBand", () => {
     expect(startsInPullBand({ y: 96, safeTop: 0 })).toBe(true);
     expect(startsInPullBand({ y: 97, safeTop: 0 })).toBe(false);
     expect(startsInPullBand({ y: 130, safeTop: 47 })).toBe(true);
+    expect(startsInPullBand({ y: 143, safeTop: 47 })).toBe(true);
     expect(startsInPullBand({ y: 144, safeTop: 47 })).toBe(false);
   });
 });
@@ -125,10 +126,31 @@ describe("pullBlockedAt", () => {
     expect(pullBlockedAt(inside("<div contenteditable='true'><p>Text</p></div>"))).toBe(true);
   });
 
+  it("lets it start on text that is marked not editable", () => {
+    expect(pullBlockedAt(inside("<div contenteditable='false'><p>Text</p></div>"))).toBe(false);
+  });
+
   it("keeps it out of anything with a drag of its own, such as an area picker", () => {
     expect(
       pullBlockedAt(inside("<div style='touch-action: none'><div><span>Grip</span></div></div>")),
     ).toBe(true);
+  });
+
+  it("keeps it out of anything that leaves vertical drags to its own script", () => {
+    expect(
+      pullBlockedAt(inside("<div style='touch-action: pan-x'><span>Slider</span></div>")),
+    ).toBe(true);
+    expect(
+      pullBlockedAt(inside("<div style='touch-action: pinch-zoom'><span>Map</span></div>")),
+    ).toBe(true);
+  });
+
+  it("lets it start where the page pans vertically as usual", () => {
+    for (const value of ["auto", "manipulation", "pan-x pan-y", "pan-y", "pan-down"]) {
+      expect(
+        pullBlockedAt(inside(`<div style='touch-action: ${value}'><span>Text</span></div>`)),
+      ).toBe(false);
+    }
   });
 
   it("keeps it out of a scrolled-down inner list", () => {

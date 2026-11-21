@@ -50,6 +50,12 @@ export function PullToReload() {
     let reducedMotion = false;
     let frame = 0;
     let springBack = 0;
+    // The top safe area, measured once and again when the screen turns or
+    // resizes, not on every tap.
+    let safeTop = safeAreaTop();
+    const remeasure = () => {
+      safeTop = safeAreaTop();
+    };
     // Whether this gesture has drawn the badge, which a cancel must then put away.
     let shown = false;
 
@@ -135,7 +141,7 @@ export function PullToReload() {
         event.touches.length === 1 &&
         touch &&
         window.scrollY <= 0 &&
-        startsInPullBand({ y: touch.clientY, safeTop: safeAreaTop() }) &&
+        startsInPullBand({ y: touch.clientY, safeTop }) &&
         canStartAt(event.target)
           ? { y: touch.clientY, id: touch.identifier }
           : null;
@@ -179,6 +185,7 @@ export function PullToReload() {
     window.addEventListener("touchmove", onMove, { passive: true });
     window.addEventListener("touchend", onEnd);
     window.addEventListener("touchcancel", onEnd);
+    window.addEventListener("resize", remeasure);
     return () => {
       documentElement.style.overscrollBehaviorY = previous;
       cancelAnimationFrame(frame);
@@ -187,6 +194,7 @@ export function PullToReload() {
       window.removeEventListener("touchmove", onMove);
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("touchcancel", onEnd);
+      window.removeEventListener("resize", remeasure);
     };
   }, [enabled]);
 
