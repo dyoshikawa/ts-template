@@ -17,6 +17,8 @@ export const en: Messages = {
     reloading: "Reloading…",
     dismiss: "Dismiss",
     retry: "Retry",
+    recommended: "Recommended",
+    recommendedOption: ({ label }) => `${label} (Recommended)`,
   },
   turnstile: {
     unavailable: "This action is unavailable: the verification check is not set up on this server.",

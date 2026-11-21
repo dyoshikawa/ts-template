@@ -20,6 +20,8 @@ export const ja = {
     reloading: "更新中…",
     dismiss: "閉じる",
     retry: "再試行",
+    recommended: "おすすめ",
+    recommendedOption: ({ label }: { label: string }) => `${label}（おすすめ）`,
   },
   turnstile: {
     unavailable: "この操作は使えません。このサーバーでは確認の仕組みが設定されていません。",
