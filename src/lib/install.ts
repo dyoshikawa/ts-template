@@ -75,12 +75,12 @@ export const installStore = {
 };
 
 /** Whether the page opened as the installed app (the manifest's `standalone`) or from iOS's home screen. */
-const runsInstalled = (): boolean =>
+export const runsInstalled = (): boolean =>
   window.matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches ||
   (navigator as { standalone?: boolean }).standalone === true;
 
 /** Whether this is an iPhone or an iPad — the iPad calls itself a Mac with fingers since iPadOS 13. */
-const isIos = (): boolean =>
+export const isIos = (): boolean =>
   typeof navigator !== "undefined" &&
   (/iPad|iPhone|iPod/u.test(navigator.userAgent) ||
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));

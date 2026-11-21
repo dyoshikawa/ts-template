@@ -20,3 +20,13 @@ export function isLocalRequest(request: Request): boolean {
     client === "::1"
   );
 }
+
+/**
+ * Whether development stand-ins apply (Cloudflare's Turnstile test keys, a
+ * fixed auth secret, `localhost` passkeys): under `vp dev`, or for a request
+ * to a local address. A deployed Worker never matches, so it fails closed
+ * without its real configuration.
+ */
+export function isLocalRun(request: Request): boolean {
+  return import.meta.env.DEV || isLocalRequest(request);
+}

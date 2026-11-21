@@ -1,13 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest, setCookie } from "@tanstack/react-start/server";
+import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import * as z from "zod/mini";
 
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
-import { LANGUAGE_COOKIE, LANGUAGE_COOKIE_MAX_AGE, LANGUAGES } from "../i18n/language";
+import { LANGUAGES } from "../i18n/language";
 import { readSession, refreshSessionCache } from "./auth-server";
+import { setLanguageCookie } from "./language-cookie";
 
 /**
  * Remembers the language the user picked: in a cookie (for this browser,
@@ -19,12 +20,7 @@ export const setLanguagePreference = createServerFn({ method: "POST" })
   .validator((input: unknown) => z.object({ language: z.enum(LANGUAGES) }).parse(input))
   .handler(async ({ data }) => {
     const request = getRequest();
-    setCookie(LANGUAGE_COOKIE, data.language, {
-      path: "/",
-      maxAge: LANGUAGE_COOKIE_MAX_AGE,
-      sameSite: "lax",
-      secure: new URL(request.url).protocol === "https:",
-    });
+    setLanguageCookie({ request, language: data.language });
     const session = await readSession();
     if (!session) {
       return;

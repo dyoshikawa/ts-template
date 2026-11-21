@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 
-import { isLocalRequest } from "./local-request";
+import { isLocalRun } from "./local-request";
 
 /**
  * Stand-in secret for local runs only (`vp dev`, the emulator without a
@@ -38,7 +38,7 @@ export function resolveAuthSecret({ request }: { request: Request }): string {
   // Used as given (an existing secret keeps verifying the cookies it signed);
   // one of nothing but whitespace counts as unset.
   const secret = env.BETTER_AUTH_SECRET?.trim() ? env.BETTER_AUTH_SECRET : undefined;
-  if (import.meta.env.DEV || isLocalRequest(request)) {
+  if (isLocalRun(request)) {
     return secret || DEV_SECRET;
   }
   if (

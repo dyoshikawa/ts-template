@@ -46,16 +46,21 @@ export function readSession(): Promise<SessionResult> {
 }
 
 /**
- * The signed-in user's id for a server function; 401 when there is none. The
+ * The signed-in session for a server function; 401 when there is none. The
  * route-level redirect to the sign-in page only covers navigation, so every
  * server function that touches a user's data checks here too.
  */
-export async function requireUserId(): Promise<string> {
+export async function requireSession(): Promise<NonNullable<SessionResult>> {
   const session = await readSession();
   if (!session) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  return session.user.id;
+  return session;
+}
+
+/** The signed-in user's id for a server function; 401 when there is none (see `requireSession`). */
+export async function requireUserId(): Promise<string> {
+  return (await requireSession()).user.id;
 }
 
 /**
