@@ -6,7 +6,7 @@ import * as z from "zod/mini";
 
 import { createDb } from "../db/client";
 import * as schema from "../db/schema";
-import { loadCreateAuth, readSession } from "./auth-server";
+import { loadCreateAuth, requireSession } from "./auth-server";
 import { otpIdentifiers } from "./otp-identifiers";
 import { passkeyConfig } from "./passkey";
 import {
@@ -43,10 +43,7 @@ const PASSKEY_FRESH_AGE_MS = 24 * 60 * 60 * 1000;
  */
 export const listPasskeys = createServerFn({ method: "GET" }).handler(async () => {
   const request = getRequest();
-  const session = await readSession();
-  if (!session) {
-    throw new Response("Unauthorized", { status: 401 });
-  }
+  const session = await requireSession();
   if (passkeyConfig({ request }).status !== "enabled") {
     return null;
   }

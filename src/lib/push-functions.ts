@@ -8,7 +8,7 @@ import { createDb } from "../db/client";
 import * as schema from "../db/schema";
 import { requestLanguage } from "../i18n/language";
 import { messagesFor } from "../i18n/messages";
-import { readSession, requireUserId } from "./auth-server";
+import { requireSession, requireUserId } from "./auth-server";
 import { notifyUser, saveSubscription, subscriptionInput, vapidKeys } from "./push";
 
 /** The public VAPID key browsers subscribe with; empty while push is not configured. */
@@ -51,10 +51,7 @@ export const deletePushSubscription = createServerFn({ method: "POST" })
  */
 export const sendTestNotification = createServerFn({ method: "POST" }).handler(async () => {
   const request = getRequest();
-  const session = await readSession();
-  if (!session) {
-    throw new Response("Unauthorized", { status: 401 });
-  }
+  const session = await requireSession();
   const userId = session.user.id;
   // In the user's language: the saved choice, else this page's.
   const t = messagesFor(requestLanguage({ request, saved: session.user.language })).notifications;
