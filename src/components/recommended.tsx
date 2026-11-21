@@ -1,5 +1,4 @@
 import { useI18n } from "../i18n/i18n-context";
-import { type Messages } from "../i18n/messages";
 import { Emoji } from "./spinner";
 
 // The one おすすめ (Recommended) label of the app (ui-rule 15): where the same
@@ -7,6 +6,8 @@ import { Emoji } from "./spinner";
 // which model draws), the recommended one carries this label and is listed
 // first. Which means is recommended is the owner's call, recorded in the
 // docs; labelling it changes nothing that is stored or picked by default.
+// Inside a `<select>`, where no badge fits, the option's text is
+// `t.common.recommendedOption({ label })`, e.g. 「Remove.bg（おすすめ）」.
 
 /** The badge beside the recommended means on a chip, a radio or a button. */
 export function RecommendedBadge() {
@@ -17,11 +18,6 @@ export function RecommendedBadge() {
       {t.common.recommended}
     </span>
   );
-}
-
-/** A `<select>` option's text for the recommended means, e.g. 「Remove.bg（おすすめ）」. */
-export function recommendedOptionLabel({ label, t }: { label: string; t: Messages }): string {
-  return t.common.recommendedOption({ label });
 }
 
 /**

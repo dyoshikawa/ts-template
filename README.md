@@ -49,9 +49,9 @@ an installable PWA and Web Push notifications — on the toolchain used by
   that waits on the server (never a full-screen block), one emoji per action (`BUTTON_EMOJI`),
   pull down to reload in the installed app (`PullToReload`; only a pull that starts within 96 px of
   the top, below the notch), and one おすすめ / Recommended label for the recommended means where
-  several do the same thing (`src/components/recommended.tsx`: a badge, a select option's text and
-  a display order that leaves the source list alone). `e2e/ui-rules.spec.ts` and
-  `e2e/input-zoom.spec.ts` check them.
+  several do the same thing (`src/components/recommended.tsx`: a badge and a display order that
+  leaves the source list alone; `t.common.recommendedOption` for a select option's text).
+  `e2e/ui-rules.spec.ts` and `e2e/input-zoom.spec.ts` check them.
 
 ## What's included
 

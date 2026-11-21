@@ -3,14 +3,14 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { en } from "../i18n/en";
 import { ja } from "../i18n/ja";
-import { RecommendedBadge, recommendedFirst, recommendedOptionLabel } from "./recommended";
+import { RecommendedBadge, recommendedFirst } from "./recommended";
 
 afterEach(() => {
   cleanup();
 });
 
 describe("RecommendedBadge", () => {
-  it("reads おすすめ, with its emoji hidden from screen readers", () => {
+  it("reads おすすめ in Japanese, with its emoji hidden from screen readers", () => {
     render(
       <button type="button">
         Remove.bg <RecommendedBadge />
@@ -21,10 +21,10 @@ describe("RecommendedBadge", () => {
   });
 });
 
-describe("recommendedOptionLabel", () => {
+describe("common.recommendedOption", () => {
   it("marks a select option's text in both languages", () => {
-    expect(recommendedOptionLabel({ label: "Remove.bg", t: ja })).toBe("Remove.bg（おすすめ）");
-    expect(recommendedOptionLabel({ label: "Remove.bg", t: en })).toBe("Remove.bg (Recommended)");
+    expect(ja.common.recommendedOption({ label: "Remove.bg" })).toBe("Remove.bg（おすすめ）");
+    expect(en.common.recommendedOption({ label: "Remove.bg" })).toBe("Remove.bg (Recommended)");
   });
 });
 
