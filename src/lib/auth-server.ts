@@ -13,6 +13,15 @@ export async function loadCreateAuth(): Promise<CreateAuth> {
   return (await import("./auth")).createAuth;
 }
 
+/**
+ * Without a session token cookie the answer is `null`, as Better Auth itself
+ * would answer (see `hasSessionCookie`), without loading Better Auth. Only
+ * that direction is short-cut: with the cookie, Better Auth always decides.
+ * The app reads sessions from cookies only (its plugins are captcha,
+ * emailOTP, passkey and tanstackStartCookies); adding one that reads them
+ * from the `Authorization` header (bearer, JWT, API keys, one-time tokens)
+ * means letting requests that carry that header through here too.
+ */
 async function lookUpSession(request: Request): Promise<SessionResult> {
   if (!hasSessionCookie(request.headers.get("cookie"))) {
     return null;

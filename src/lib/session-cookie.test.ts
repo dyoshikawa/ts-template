@@ -15,7 +15,10 @@ describe("hasSessionCookie", () => {
     expect(hasSessionCookie("lang=ja")).toBe(false);
     // The cookie cache alone is no session: Better Auth answers null for it.
     expect(hasSessionCookie("better-auth.session_data=xyz")).toBe(false);
+    expect(hasSessionCookie("__Host-better-auth.session_data=xyz")).toBe(false);
+    expect(hasSessionCookie("__Secure-better-auth.session_data=xyz")).toBe(false);
     // A value that merely mentions the name is not the cookie.
     expect(hasSessionCookie("note=session_token")).toBe(false);
+    expect(hasSessionCookie("note=__Host-better-auth.session_token")).toBe(false);
   });
 });

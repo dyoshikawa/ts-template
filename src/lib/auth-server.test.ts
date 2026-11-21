@@ -38,10 +38,24 @@ describe("readSession", () => {
   });
 
   it("answers null without building Better Auth when there is no session cookie", async () => {
-    current = new Request("https://app.example.com/", { headers: { cookie: "lang=ja" } });
-    expect(await readSession()).toBeNull();
-    await expect(requireUserId()).rejects.toBeInstanceOf(Response);
+    // The cookie cache (`session_data`) alone counts as no session cookie.
+    for (const cookie of [null, "lang=ja", "__Host-better-auth.session_data=x"]) {
+      current = new Request("https://app.example.com/", {
+        headers: cookie === null ? {} : { cookie },
+      });
+      expect(await readSession()).toBeNull();
+      await expect(requireUserId()).rejects.toBeInstanceOf(Response);
+    }
     expect(createAuth).not.toHaveBeenCalled();
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
+  it("leaves the decision to Better Auth whenever a session cookie is there", async () => {
+    // The cookie is never taken as "signed in": Better Auth may still say no.
+    current = signedIn();
+    getSession.mockResolvedValue(null);
+    expect(await readSession()).toBeNull();
+    expect(getSession).toHaveBeenCalledTimes(1);
   });
 
   it("does not keep a failed lookup", async () => {

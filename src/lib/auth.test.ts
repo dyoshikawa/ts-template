@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 
 import { createAuth } from "./auth";
 import { passkeyPlugins } from "./auth-passkey";
+import { hasSessionCookie } from "./session-cookie";
 
 /** The stand-in `env` as a bag of variables. */
 const vars = env as unknown as Record<string, string | undefined>;
@@ -61,5 +62,30 @@ describe("createAuth", () => {
 
     const http = await createAuth({ request: local }).$context;
     expect(http.authCookies.sessionToken.name).toBe("better-auth.session_token");
+  });
+});
+
+describe("the session-cookie shortcut's assumptions (re-check on Better Auth upgrades)", () => {
+  // `readSession` answers null without asking Better Auth when
+  // `hasSessionCookie` finds no session token cookie (src/lib/auth-server.ts).
+
+  it("recognizes the session token cookie under the names this app sets", async () => {
+    vars.BETTER_AUTH_SECRET = "a-test-secret-that-is-long-enough-1234567890";
+    for (const request of [deployed, local]) {
+      const { authCookies } = await createAuth({ request }).$context;
+      expect(hasSessionCookie(`${authCookies.sessionToken.name}=t.s`)).toBe(true);
+      expect(hasSessionCookie(`${authCookies.sessionData.name}=x`)).toBe(false);
+    }
+  });
+
+  it("gets null from Better Auth itself without a session token cookie", async () => {
+    vars.BETTER_AUTH_SECRET = "a-test-secret-that-is-long-enough-1234567890";
+    for (const request of [deployed, local]) {
+      const auth = createAuth({ request });
+      const { authCookies } = await auth.$context;
+      for (const cookie of ["", "lang=ja", `${authCookies.sessionData.name}=xyz`]) {
+        await expect(auth.api.getSession({ headers: new Headers({ cookie }) })).resolves.toBeNull();
+      }
+    }
   });
 });
